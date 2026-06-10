@@ -4,1712 +4,1318 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Genomic Burden & Actionability Atlas</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 <style>
-  /* ── Reset & Variables ───────────────────────────────────────────── */
-  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
-
   :root {
-    --navy:    #0d1b2a;
-    --navy2:   #1a2d42;
-    --navy3:   #243650;
-    --teal:    #2dd4bf;
-    --teal2:   #14b8a6;
-    --purple:  #8b5cf6;
-    --purple2: #7c3aed;
-    --amber:   #f59e0b;
-    --amber2:  #d97706;
-    --red:     #ef4444;
-    --green:   #22c55e;
-    --white:   #f8fafc;
-    --gray1:   #e2e8f0;
-    --gray2:   #94a3b8;
-    --gray3:   #64748b;
-    --text:    #e2e8f0;
-    --textd:   #94a3b8;
-    --card:    #1a2d42;
-    --border:  #243650;
-    --sidebar: 220px;
-    --header:  56px;
+    --navy: #0d1b2a;
+    --navy2: #1b2d42;
+    --navy3: #243447;
+    --teal: #00b4d8;
+    --teal2: #0096b4;
+    --purple: #7b5ea7;
+    --amber: #f4a261;
+    --green: #2ec4b6;
+    --red: #e76f51;
+    --white: #f8f9fa;
+    --gray: #9aacb8;
+    --gray2: #2a3d52;
+    --card: #162032;
+    --border: #243447;
   }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--navy); color: var(--white); font-family: 'Segoe UI', system-ui, sans-serif; font-size: 14px; min-height: 100vh; }
 
-  html, body { height: 100%; overflow: hidden; }
-  body {
-    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-    background: var(--navy);
-    color: var(--text);
-    display: flex;
-    flex-direction: column;
-    font-size: 14px;
-    line-height: 1.5;
-  }
+  /* Header */
+  header { background: var(--navy2); border-bottom: 1px solid var(--border); padding: 12px 24px; display: flex; align-items: center; justify-content: space-between; }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-icon { width: 36px; height: 36px; background: linear-gradient(135deg, var(--teal), var(--purple)); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 18px; }
+  .logo-text h1 { font-size: 16px; font-weight: 700; color: var(--white); letter-spacing: 0.3px; }
+  .logo-text p { font-size: 11px; color: var(--gray); }
+  .header-right { display: flex; align-items: center; gap: 12px; }
+  .data-badge { background: var(--navy3); border: 1px solid var(--border); border-radius: 20px; padding: 4px 10px; font-size: 11px; color: var(--gray); }
+  .data-badge span { color: var(--teal); font-weight: 600; }
 
-  /* ── Top Header ──────────────────────────────────────────────────── */
-  #app-header {
-    height: var(--header);
-    background: var(--navy2);
-    border-bottom: 1px solid var(--border);
-    display: flex;
-    align-items: center;
-    padding: 0 20px;
-    gap: 16px;
-    flex-shrink: 0;
-    z-index: 100;
-  }
-  #app-header .logo {
-    display: flex; align-items: center; gap: 10px;
-    font-size: 16px; font-weight: 700; color: var(--teal);
-    white-space: nowrap;
-  }
-  #app-header .logo svg { flex-shrink: 0; }
-  #app-header .subtitle {
-    font-size: 11px; color: var(--gray2); font-weight: 400;
-    display: block; line-height: 1.2;
-  }
-  .header-search {
-    flex: 1; max-width: 360px; margin-left: auto;
-    position: relative;
-  }
-  .header-search input {
-    width: 100%;
-    background: var(--navy3);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 7px 12px 7px 34px;
-    color: var(--text);
-    font-size: 13px;
-    outline: none;
-    transition: border-color .2s;
-  }
-  .header-search input::placeholder { color: var(--gray3); }
-  .header-search input:focus { border-color: var(--teal); }
-  .header-search .search-icon {
-    position: absolute; left: 10px; top: 50%; transform: translateY(-50%);
-    color: var(--gray3); pointer-events: none;
-  }
-  .header-actions { display: flex; align-items: center; gap: 10px; }
-  .upload-btn {
-    display: flex; align-items: center; gap: 6px;
-    background: var(--teal2); color: var(--navy);
-    border: none; border-radius: 8px; padding: 7px 14px;
-    font-size: 13px; font-weight: 600; cursor: pointer;
-    transition: background .2s;
-  }
-  .upload-btn:hover { background: var(--teal); }
-  #upload-input { display: none; }
+  /* Disease selector bar */
+  .selector-bar { background: var(--navy2); border-bottom: 1px solid var(--border); padding: 10px 24px; display: flex; align-items: center; gap: 16px; }
+  .selector-bar label { font-size: 12px; color: var(--gray); white-space: nowrap; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+  #diseaseSelect { background: var(--navy3); color: var(--white); border: 1px solid var(--teal); border-radius: 6px; padding: 7px 14px; font-size: 13px; min-width: 260px; cursor: pointer; outline: none; }
+  #diseaseSelect:focus { border-color: var(--teal2); box-shadow: 0 0 0 2px rgba(0,180,216,0.2); }
+  .search-wrap { flex: 1; max-width: 300px; position: relative; }
+  .search-wrap input { width: 100%; background: var(--navy3); border: 1px solid var(--border); border-radius: 6px; padding: 7px 14px 7px 34px; color: var(--white); font-size: 13px; outline: none; }
+  .search-wrap input:focus { border-color: var(--teal); }
+  .search-wrap::before { content: '🔍'; position: absolute; left: 10px; top: 7px; font-size: 12px; }
+  .search-wrap input::placeholder { color: var(--gray); }
 
-  /* ── Layout ──────────────────────────────────────────────────────── */
-  #layout {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
-  }
+  /* Nav tabs */
+  nav { background: var(--navy2); border-bottom: 1px solid var(--border); padding: 0 24px; display: flex; gap: 4px; }
+  nav button { background: none; border: none; color: var(--gray); padding: 12px 18px; font-size: 13px; cursor: pointer; border-bottom: 2px solid transparent; transition: all 0.15s; white-space: nowrap; }
+  nav button:hover { color: var(--white); }
+  nav button.active { color: var(--teal); border-bottom-color: var(--teal); font-weight: 600; }
 
-  /* ── Sidebar ─────────────────────────────────────────────────────── */
-  #sidebar {
-    width: var(--sidebar);
-    background: var(--navy2);
-    border-right: 1px solid var(--border);
-    display: flex; flex-direction: column;
-    flex-shrink: 0;
-    overflow-y: auto;
-    padding: 12px 0;
-  }
-  .nav-section-label {
-    font-size: 10px; font-weight: 700; letter-spacing: .1em;
-    color: var(--gray3); padding: 14px 16px 6px; text-transform: uppercase;
-  }
-  .nav-item {
-    display: flex; align-items: center; gap: 10px;
-    padding: 9px 16px;
-    cursor: pointer;
-    border-left: 3px solid transparent;
-    transition: all .15s;
-    color: var(--gray2);
-    font-size: 13px;
-    user-select: none;
-  }
-  .nav-item:hover { background: var(--navy3); color: var(--text); }
-  .nav-item.active {
-    background: rgba(45, 212, 191, .08);
-    border-left-color: var(--teal);
-    color: var(--teal);
-  }
-  .nav-item .nav-icon { font-size: 16px; flex-shrink: 0; }
-  .nav-badge {
-    margin-left: auto; background: var(--amber);
-    color: var(--navy); font-size: 10px; font-weight: 700;
-    border-radius: 10px; padding: 1px 6px;
-  }
-  .sidebar-footer {
-    margin-top: auto; padding: 12px 16px;
-    border-top: 1px solid var(--border);
-  }
-  .data-status { font-size: 11px; color: var(--gray3); }
-  .data-status .dot {
-    display: inline-block; width: 7px; height: 7px;
-    border-radius: 50%; background: var(--amber); margin-right: 5px;
-  }
-
-  /* ── Main Content ────────────────────────────────────────────────── */
-  #main {
-    flex: 1; overflow-y: auto; overflow-x: hidden;
-    padding: 24px;
-    display: flex; flex-direction: column; gap: 0;
-  }
-
-  /* ── Panels ──────────────────────────────────────────────────────── */
-  .panel { display: none; flex-direction: column; gap: 20px; }
-  .panel.active { display: flex; }
-
-  /* ── Panel Header ────────────────────────────────────────────────── */
-  .panel-header {
-    display: flex; align-items: flex-start;
-    justify-content: space-between; gap: 16px; flex-wrap: wrap;
-  }
-  .panel-title { font-size: 20px; font-weight: 700; color: var(--white); }
-  .panel-subtitle { font-size: 13px; color: var(--gray2); margin-top: 3px; }
-
-  /* ── Filter Bar ──────────────────────────────────────────────────── */
-  .filter-bar {
-    display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
-    background: var(--navy2); border: 1px solid var(--border);
-    border-radius: 10px; padding: 12px 16px;
-  }
-  .filter-bar label { font-size: 12px; color: var(--gray2); margin-right: 4px; }
-  .filter-bar select, .filter-bar input[type="text"] {
-    background: var(--navy3); border: 1px solid var(--border);
-    border-radius: 6px; color: var(--text); padding: 5px 10px;
-    font-size: 12px; outline: none; cursor: pointer;
-  }
-  .filter-bar select:focus, .filter-bar input[type="text"]:focus { border-color: var(--teal); }
-  .filter-sep { color: var(--border); }
-
-  /* ── Cards ───────────────────────────────────────────────────────── */
-  .card {
-    background: var(--card); border: 1px solid var(--border);
-    border-radius: 12px; padding: 18px 20px;
-  }
-  .card-title {
-    font-size: 13px; font-weight: 600; color: var(--gray2);
-    text-transform: uppercase; letter-spacing: .05em; margin-bottom: 14px;
-    display: flex; align-items: center; gap: 8px;
-  }
-  .card-title .dot-accent {
-    width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0;
-  }
-
-  /* ── Grid helpers ────────────────────────────────────────────────── */
-  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-  .grid-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
-  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
-
-  /* ── Stat tiles ──────────────────────────────────────────────────── */
-  .stat-tile {
-    background: var(--card); border: 1px solid var(--border);
-    border-radius: 12px; padding: 16px 18px;
-    display: flex; flex-direction: column; gap: 4px;
-  }
-  .stat-tile .st-label { font-size: 11px; color: var(--gray2); text-transform: uppercase; letter-spacing: .06em; }
-  .stat-tile .st-value { font-size: 26px; font-weight: 700; color: var(--white); }
-  .stat-tile .st-sub { font-size: 12px; color: var(--gray3); }
-  .stat-tile .st-delta { font-size: 12px; font-weight: 600; }
-  .st-delta.up { color: var(--red); }
-  .st-delta.down { color: var(--green); }
-
-  /* ── Tables ──────────────────────────────────────────────────────── */
-  .table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid var(--border); }
-  table { width: 100%; border-collapse: collapse; font-size: 13px; }
-  thead th {
-    background: var(--navy3); color: var(--gray2);
-    text-align: left; padding: 10px 14px;
-    font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
-    white-space: nowrap; position: sticky; top: 0; z-index: 2;
-    cursor: pointer; user-select: none;
-  }
-  thead th:hover { color: var(--teal); }
-  tbody tr { border-bottom: 1px solid var(--border); transition: background .12s; }
-  tbody tr:last-child { border-bottom: none; }
-  tbody tr:hover { background: rgba(45,212,191,.04); }
-  tbody td { padding: 10px 14px; vertical-align: middle; }
-  .cell-gene { font-weight: 600; color: var(--teal); font-family: 'Courier New', monospace; font-size: 12px; }
-  .cell-variant { font-family: 'Courier New', monospace; font-size: 11px; color: var(--amber); }
-  .cell-disease { font-weight: 500; }
-
-  /* ── Badges ──────────────────────────────────────────────────────── */
-  .badge {
-    display: inline-flex; align-items: center; gap: 4px;
-    border-radius: 6px; padding: 3px 9px;
-    font-size: 11px; font-weight: 600; white-space: nowrap;
-  }
-  .badge-teal    { background: rgba(45,212,191,.15); color: var(--teal); border: 1px solid rgba(45,212,191,.3); }
-  .badge-purple  { background: rgba(139,92,246,.15); color: var(--purple); border: 1px solid rgba(139,92,246,.3); }
-  .badge-amber   { background: rgba(245,158,11,.15); color: var(--amber); border: 1px solid rgba(245,158,11,.3); }
-  .badge-red     { background: rgba(239,68,68,.15); color: var(--red); border: 1px solid rgba(239,68,68,.3); }
-  .badge-green   { background: rgba(34,197,94,.15); color: var(--green); border: 1px solid rgba(34,197,94,.3); }
-  .badge-gray    { background: rgba(148,163,184,.1); color: var(--gray2); border: 1px solid rgba(148,163,184,.2); }
-  .badge-navy    { background: rgba(13,27,42,.5); color: var(--gray2); border: 1px solid var(--border); }
-
-  /* ── Chart containers ────────────────────────────────────────────── */
-  .chart-wrap { position: relative; }
-  .chart-wrap canvas { max-width: 100%; }
-
-  /* ── Tabs ────────────────────────────────────────────────────────── */
-  .tab-bar { display: flex; gap: 4px; border-bottom: 1px solid var(--border); margin-bottom: 18px; }
-  .tab-btn {
-    padding: 8px 16px; font-size: 13px; cursor: pointer;
-    color: var(--gray2); border-bottom: 2px solid transparent;
-    transition: all .15s; user-select: none; margin-bottom: -1px;
-  }
-  .tab-btn.active { color: var(--teal); border-bottom-color: var(--teal); }
-  .tab-btn:hover:not(.active) { color: var(--text); }
+  /* Layout */
+  main { padding: 20px 24px; max-width: 1400px; margin: 0 auto; }
   .tab-panel { display: none; }
   .tab-panel.active { display: block; }
 
-  /* ── Progress / score bars ───────────────────────────────────────── */
-  .score-bar { height: 6px; border-radius: 3px; background: var(--navy3); overflow: hidden; }
-  .score-bar-fill { height: 100%; border-radius: 3px; transition: width .4s; }
+  /* Grid */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .grid-4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }
+  .col-span-2 { grid-column: span 2; }
+  .col-span-3 { grid-column: span 3; }
 
-  /* ── HPO tags ────────────────────────────────────────────────────── */
-  .hpo-tag {
-    display: inline-flex; align-items: center;
-    background: rgba(139,92,246,.12); border: 1px solid rgba(139,92,246,.25);
-    color: var(--purple); border-radius: 20px; padding: 2px 10px;
-    font-size: 11px; margin: 2px;
-  }
+  /* Cards */
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; }
+  .card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+  .card-title { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.6px; color: var(--teal); }
+  .card-subtitle { font-size: 11px; color: var(--gray); margin-top: 2px; }
+  .section-gap { margin-top: 20px; }
 
-  /* ── Region cards ────────────────────────────────────────────────── */
-  .region-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px,1fr)); gap: 12px; }
-  .region-card {
-    background: var(--card); border: 1px solid var(--border);
-    border-radius: 10px; padding: 14px 16px;
-    cursor: pointer; transition: all .15s;
-    position: relative; overflow: hidden;
-  }
-  .region-card:hover { border-color: var(--teal); transform: translateY(-2px); }
-  .region-card.selected { border-color: var(--teal); background: rgba(45,212,191,.05); }
-  .region-card .rc-region { font-size: 12px; color: var(--gray2); margin-bottom: 4px; }
-  .region-card .rc-value { font-size: 22px; font-weight: 700; color: var(--white); }
-  .region-card .rc-unit { font-size: 11px; color: var(--gray3); margin-top: 2px; }
-  .region-card .rc-bar {
-    position: absolute; bottom: 0; left: 0; height: 3px;
-    background: linear-gradient(90deg, var(--teal), var(--purple));
-  }
+  /* Disease overview */
+  .disease-hero { background: linear-gradient(135deg, var(--navy2), var(--navy3)); border: 1px solid var(--border); border-left: 4px solid var(--teal); border-radius: 10px; padding: 20px; margin-bottom: 20px; }
+  .disease-name { font-size: 22px; font-weight: 700; color: var(--white); margin-bottom: 4px; }
+  .disease-desc { color: var(--gray); line-height: 1.6; font-size: 13px; max-width: 80%; }
+  .disease-meta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+  .meta-pill { background: var(--navy3); border: 1px solid var(--border); border-radius: 20px; padding: 4px 12px; font-size: 12px; color: var(--white); }
+  .meta-pill span { color: var(--gray); margin-right: 4px; }
 
-  /* ── Tooltip ─────────────────────────────────────────────────────── */
-  .tooltip-container { position: relative; display: inline-block; }
-  .tooltip-text {
-    visibility: hidden; opacity: 0;
-    background: var(--navy3); color: var(--text);
-    border: 1px solid var(--border); border-radius: 6px;
-    padding: 6px 10px; font-size: 11px;
-    position: absolute; z-index: 200; bottom: calc(100% + 6px); left: 50%;
-    transform: translateX(-50%); white-space: nowrap;
-    transition: opacity .15s; pointer-events: none;
-  }
-  .tooltip-container:hover .tooltip-text { visibility: visible; opacity: 1; }
+  /* Badges */
+  .badge { display: inline-block; border-radius: 4px; padding: 2px 8px; font-size: 11px; font-weight: 600; margin: 2px; }
+  .badge-teal { background: rgba(0,180,216,0.15); color: var(--teal); border: 1px solid rgba(0,180,216,0.3); }
+  .badge-purple { background: rgba(123,94,167,0.15); color: #b39ddb; border: 1px solid rgba(123,94,167,0.3); }
+  .badge-amber { background: rgba(244,162,97,0.15); color: var(--amber); border: 1px solid rgba(244,162,97,0.3); }
+  .badge-green { background: rgba(46,196,182,0.15); color: var(--green); border: 1px solid rgba(46,196,182,0.3); }
+  .badge-red { background: rgba(231,111,81,0.15); color: var(--red); border: 1px solid rgba(231,111,81,0.3); }
+  .badge-gray { background: rgba(154,172,184,0.1); color: var(--gray); border: 1px solid rgba(154,172,184,0.2); }
 
-  /* ── Priority matrix ─────────────────────────────────────────────── */
-  .priority-row {
-    display: flex; align-items: center; gap: 12px;
-    padding: 12px 0; border-bottom: 1px solid var(--border);
-  }
-  .priority-row:last-child { border-bottom: none; }
-  .priority-rank { font-size: 18px; font-weight: 800; color: var(--gray3); width: 28px; text-align: center; }
-  .priority-info { flex: 1; }
-  .priority-name { font-weight: 600; color: var(--white); font-size: 14px; }
-  .priority-meta { font-size: 11px; color: var(--gray3); margin-top: 2px; }
-  .priority-scores { display: flex; gap: 8px; flex-wrap: wrap; }
-  .pscore { font-size: 11px; color: var(--gray2); display: flex; flex-direction: column; align-items: center; min-width: 60px; }
-  .pscore-val { font-size: 15px; font-weight: 700; color: var(--white); }
-  .priority-total { text-align: right; min-width: 56px; }
-  .priority-total .pt-score { font-size: 22px; font-weight: 800; }
-  .priority-total .pt-label { font-size: 10px; color: var(--gray3); }
+  /* Stat cards */
+  .stat-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 14px 16px; }
+  .stat-label { font-size: 11px; color: var(--gray); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; }
+  .stat-value { font-size: 20px; font-weight: 700; color: var(--white); }
+  .stat-sub { font-size: 11px; color: var(--teal); margin-top: 2px; }
 
-  /* ── World map SVG ───────────────────────────────────────────────── */
-  #world-map-svg { width: 100%; border-radius: 10px; background: var(--navy3); }
-  .map-region { transition: fill .2s; cursor: pointer; }
-  .map-region:hover { opacity: .8; }
-  .map-tooltip {
-    position: absolute; background: var(--navy3); border: 1px solid var(--border);
-    border-radius: 8px; padding: 8px 12px; font-size: 12px; pointer-events: none;
-    z-index: 300; opacity: 0; transition: opacity .15s;
-  }
+  /* Info rows */
+  .info-row { display: flex; justify-content: space-between; align-items: flex-start; padding: 7px 0; border-bottom: 1px solid var(--border); }
+  .info-row:last-child { border-bottom: none; }
+  .info-label { font-size: 12px; color: var(--gray); font-weight: 500; min-width: 140px; }
+  .info-value { font-size: 13px; color: var(--white); text-align: right; flex: 1; }
 
-  /* ── Upload area ─────────────────────────────────────────────────── */
-  .upload-area {
-    border: 2px dashed var(--border); border-radius: 12px;
-    padding: 32px; text-align: center; cursor: pointer;
-    transition: all .2s; color: var(--gray3);
-  }
-  .upload-area:hover { border-color: var(--teal); color: var(--teal); background: rgba(45,212,191,.03); }
-  .upload-area .ua-icon { font-size: 32px; margin-bottom: 8px; }
-  .upload-area .ua-text { font-size: 14px; font-weight: 500; }
-  .upload-area .ua-sub { font-size: 12px; margin-top: 4px; }
+  /* Tables */
+  .table-wrap { overflow-x: auto; }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead th { background: var(--navy3); color: var(--gray); padding: 9px 12px; text-align: left; font-weight: 600; font-size: 11px; text-transform: uppercase; letter-spacing: 0.4px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  tbody td { padding: 9px 12px; border-bottom: 1px solid var(--border); vertical-align: middle; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: rgba(255,255,255,0.03); }
 
-  /* ── Scrollbars ──────────────────────────────────────────────────── */
-  ::-webkit-scrollbar { width: 6px; height: 6px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--navy3); border-radius: 3px; }
-  ::-webkit-scrollbar-thumb:hover { background: var(--gray3); }
+  /* Map */
+  #map { height: 420px; border-radius: 8px; border: 1px solid var(--border); }
+  .map-title { font-size: 13px; font-weight: 600; color: var(--white); margin-bottom: 10px; }
+  .map-legend { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 10px; align-items: center; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11px; color: var(--gray); }
+  .legend-dot { width: 12px; height: 12px; border-radius: 50%; }
 
-  /* ── Misc ────────────────────────────────────────────────────────── */
-  .divider { height: 1px; background: var(--border); margin: 4px 0; }
-  .text-teal { color: var(--teal); }
-  .text-amber { color: var(--amber); }
-  .text-purple { color: var(--purple); }
-  .text-red { color: var(--red); }
-  .text-green { color: var(--green); }
-  .text-gray { color: var(--gray2); }
-  .flex { display: flex; }
-  .flex-col { display: flex; flex-direction: column; }
-  .items-center { align-items: center; }
-  .gap-8 { gap: 8px; }
-  .gap-12 { gap: 12px; }
-  .gap-16 { gap: 16px; }
-  .mt-4 { margin-top: 4px; }
+  /* Chart */
+  .chart-wrap { position: relative; height: 240px; }
+
+  /* Actionability */
+  .action-card { background: var(--card); border: 1px solid var(--border); border-radius: 10px; padding: 16px; margin-bottom: 12px; }
+  .action-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+  .action-gene { font-size: 15px; font-weight: 700; color: var(--teal); }
+  .action-variant { font-size: 12px; color: var(--gray); margin-top: 2px; }
+  .action-body { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .action-section { }
+  .action-section-title { font-size: 11px; color: var(--gray); text-transform: uppercase; letter-spacing: 0.4px; margin-bottom: 4px; font-weight: 600; }
+  .action-section-val { font-size: 12px; color: var(--white); line-height: 1.5; }
+  .no-action { background: var(--card); border: 1px solid var(--border); border-left: 4px solid var(--amber); border-radius: 10px; padding: 20px; color: var(--gray); font-size: 13px; line-height: 1.6; }
+
+  /* Phenotype cards */
+  .pheno-row { display: flex; flex-wrap: wrap; gap: 6px; }
+
+  /* Population freq */
+  .pop-bar-wrap { margin: 6px 0; }
+  .pop-label { display: flex; justify-content: space-between; font-size: 12px; color: var(--gray); margin-bottom: 3px; }
+  .pop-bar-bg { background: var(--navy3); border-radius: 3px; height: 8px; }
+  .pop-bar-fill { background: linear-gradient(90deg, var(--teal), var(--purple)); border-radius: 3px; height: 8px; transition: width 0.4s; }
+
+  /* Evidence strength */
+  .evidence-bar { display: flex; gap: 3px; margin-top: 4px; }
+  .evidence-pip { width: 18px; height: 6px; border-radius: 2px; background: var(--navy3); }
+  .evidence-pip.filled-high { background: var(--green); }
+  .evidence-pip.filled-mod { background: var(--amber); }
+  .evidence-pip.filled-low { background: var(--red); }
+
+  /* Scrollable list */
+  .scroll-list { max-height: 200px; overflow-y: auto; padding-right: 4px; }
+  .scroll-list::-webkit-scrollbar { width: 4px; }
+  .scroll-list::-webkit-scrollbar-track { background: var(--navy3); border-radius: 2px; }
+  .scroll-list::-webkit-scrollbar-thumb { background: var(--teal2); border-radius: 2px; }
+
   .mt-8 { margin-top: 8px; }
   .mt-12 { margin-top: 12px; }
-  .font-mono { font-family: 'Courier New', monospace; }
-  .font-bold { font-weight: 700; }
+  .flex { display: flex; }
+  .gap-8 { gap: 8px; }
+  .align-center { align-items: center; }
+  .text-gray { color: var(--gray); }
+  .text-teal { color: var(--teal); }
+  .text-amber { color: var(--amber); }
   .text-sm { font-size: 12px; }
-  .text-xs { font-size: 11px; }
-  .truncate { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-  .w-full { width: 100%; }
+  .font-bold { font-weight: 700; }
+  .lh-1-5 { line-height: 1.5; }
 </style>
 </head>
 <body>
 
-<!-- ═══════════════════════════════════════════════════════════════════ HEADER -->
-<header id="app-header">
+<header>
   <div class="logo">
-    <svg width="28" height="28" viewBox="0 0 28 28" fill="none">
-      <circle cx="14" cy="14" r="13" stroke="#2dd4bf" stroke-width="1.5"/>
-      <path d="M7 9h14M7 19h14M10 9v10M18 9v10" stroke="#2dd4bf" stroke-width="1.5" stroke-linecap="round"/>
-      <circle cx="10" cy="14" r="2" fill="#8b5cf6"/>
-      <circle cx="18" cy="14" r="2" fill="#f59e0b"/>
-    </svg>
-    <div>
-      Genomic Burden &amp; Actionability Atlas
-      <span class="subtitle">Population Genomics · Disease Burden · Clinical Actionability</span>
+    <div class="logo-icon">🧬</div>
+    <div class="logo-text">
+      <h1>Genomic Burden & Actionability Atlas</h1>
+      <p>Disease burden · Allele frequencies · Clinical actionability · Population genomics</p>
     </div>
   </div>
-  <div class="header-search">
-    <span class="search-icon">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
-    </span>
-    <input type="text" id="global-search" placeholder="Search genes, diseases, variants…" oninput="globalSearch(this.value)">
-  </div>
-  <div class="header-actions">
-    <label class="upload-btn" for="upload-input">
-      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-      Upload Data
-    </label>
-    <input type="file" id="upload-input" accept=".csv,.xlsx,.tsv" onchange="handleUpload(event)">
+  <div class="header-right">
+    <div class="data-badge">Data sources: <span>Curated example data</span></div>
+    <div class="data-badge">Future: <span>gnomAD · ClinVar · OMIM · Orphanet · WHO/GBD</span></div>
   </div>
 </header>
 
-<!-- ═══════════════════════════════════════════════════════════════════ LAYOUT -->
-<div id="layout">
+<div class="selector-bar">
+  <label>Select Disease</label>
+  <select id="diseaseSelect">
+    <option value="marfan">Marfan Syndrome</option>
+    <option value="gaucher">Gaucher Disease</option>
+    <option value="bloom">Bloom Syndrome</option>
+    <option value="fh">Familial Hypercholesterolemia</option>
+    <option value="sickle">Sickle Cell Disease</option>
+    <option value="cf">Cystic Fibrosis</option>
+    <option value="hboc">Hereditary Breast &amp; Ovarian Cancer Syndrome</option>
+    <option value="lynch">Lynch Syndrome</option>
+    <option value="wilson">Wilson Disease</option>
+    <option value="fmf">Familial Mediterranean Fever</option>
+  </select>
+  <div class="search-wrap">
+    <input type="text" id="searchInput" placeholder="Search gene, variant, or phenotype…"/>
+  </div>
+</div>
 
-<!-- ─── Sidebar ──────────────────────────────────────────────────────────── -->
-<nav id="sidebar">
-  <div class="nav-section-label">Dashboards</div>
-  <div class="nav-item active" data-panel="burden" onclick="switchPanel('burden',this)">
-    <span class="nav-icon">🌍</span> Global Burden
-  </div>
-  <div class="nav-item" data-panel="allele" onclick="switchPanel('allele',this)">
-    <span class="nav-icon">📊</span> Allele Frequencies
-  </div>
-
-  <div class="nav-section-label">Disease Data</div>
-  <div class="nav-item" data-panel="rare" onclick="switchPanel('rare',this)">
-    <span class="nav-icon">🧬</span> Rare Diseases
-  </div>
-  <div class="nav-item" data-panel="gp" onclick="switchPanel('gp',this)">
-    <span class="nav-icon">🔗</span> Genotype–Phenotype
-  </div>
-
-  <div class="nav-section-label">Clinical</div>
-  <div class="nav-item" data-panel="actionable" onclick="switchPanel('actionable',this)">
-    <span class="nav-icon">⚕️</span> Actionable Variants
-    <span class="nav-badge">12</span>
-  </div>
-  <div class="nav-item" data-panel="priority" onclick="switchPanel('priority',this)">
-    <span class="nav-icon">🎯</span> Research Priorities
-  </div>
-
-  <div class="sidebar-footer">
-    <div class="data-status"><span class="dot"></span> Mock data active</div>
-    <div class="data-status mt-4 text-xs">gnomAD · ClinVar · OMIM ready</div>
-  </div>
+<nav>
+  <button class="active" onclick="showTab('overview')">🏠 Disease Overview</button>
+  <button onclick="showTab('burden')">🌍 Global Burden Map</button>
+  <button onclick="showTab('allele')">📊 Allele Frequencies</button>
+  <button onclick="showTab('action')">⚡ Actionable Variants</button>
 </nav>
 
-<!-- ─── Main ──────────────────────────────────────────────────────────────── -->
-<main id="main">
+<main>
 
-<!-- ══════════════════════════════════════════════════════ PANEL 1 · BURDEN -->
-<section id="panel-burden" class="panel active">
-  <div class="panel-header">
-    <div>
-      <div class="panel-title">🌍 Global Disease Burden Dashboard</div>
-      <div class="panel-subtitle">Prevalence, incidence, mortality &amp; DALY estimates by region, disease, and gene</div>
+  <!-- ===== TAB 1: OVERVIEW ===== -->
+  <div id="tab-overview" class="tab-panel active">
+
+    <div id="diseaseHero" class="disease-hero"></div>
+
+    <div class="grid-4" id="statCards"></div>
+
+    <div class="grid-2 section-gap">
+      <div class="card">
+        <div class="card-header"><div><div class="card-title">Gene & Variant Information</div></div></div>
+        <div id="geneVariantInfo"></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div><div class="card-title">Phenotype Profile</div></div></div>
+        <div id="phenotypeInfo"></div>
+      </div>
     </div>
+
+    <div class="grid-2 section-gap">
+      <div class="card">
+        <div class="card-header"><div><div class="card-title">Genotype–Phenotype Relationship</div></div></div>
+        <div id="genoPhenoInfo"></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div><div class="card-title">Population Frequency Summary</div></div></div>
+        <div id="popFreqSummary"></div>
+      </div>
+    </div>
+
+    <div class="grid-2 section-gap">
+      <div class="card">
+        <div class="card-header"><div><div class="card-title">Clinical Actionability Summary</div></div></div>
+        <div id="clinActionSummary"></div>
+      </div>
+      <div class="card">
+        <div class="card-header"><div><div class="card-title">Evidence Strength & Sources</div></div></div>
+        <div id="evidenceInfo"></div>
+      </div>
+    </div>
+
   </div>
 
-  <!-- Stat tiles -->
-  <div class="grid-4">
-    <div class="stat-tile">
-      <div class="st-label">Diseases Tracked</div>
-      <div class="st-value">2,847</div>
-      <div class="st-sub">across 8 regions</div>
+  <!-- ===== TAB 2: BURDEN MAP ===== -->
+  <div id="tab-burden" class="tab-panel">
+    <div style="display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px">
+      <div class="card" style="flex:1;min-width:200px">
+        <div class="card-title" style="margin-bottom:6px">Global Estimated Cases</div>
+        <div id="globalCases" style="font-size:22px;font-weight:700;color:var(--white)"></div>
+        <div id="globalCasesSub" style="font-size:11px;color:var(--teal);margin-top:2px"></div>
+      </div>
+      <div class="card" style="flex:1;min-width:200px">
+        <div class="card-title" style="margin-bottom:6px">Most Affected Region</div>
+        <div id="mostAffected" style="font-size:16px;font-weight:700;color:var(--white)"></div>
+        <div id="mostAffectedSub" style="font-size:11px;color:var(--gray);margin-top:2px"></div>
+      </div>
+      <div class="card" style="flex:1;min-width:200px">
+        <div class="card-title" style="margin-bottom:6px">WHO Disease Category</div>
+        <div id="whoCategory" style="font-size:14px;font-weight:600;color:var(--white)"></div>
+      </div>
+      <div class="card" style="flex:1;min-width:200px">
+        <div class="card-title" style="margin-bottom:6px">Orphanet Code</div>
+        <div id="orphanetCode" style="font-size:14px;font-weight:600;color:var(--white)"></div>
+        <div id="omimCode" style="font-size:11px;color:var(--gray);margin-top:4px"></div>
+      </div>
     </div>
-    <div class="stat-tile">
-      <div class="st-label">Global Prevalence</div>
-      <div class="st-value">4.2%</div>
-      <div class="st-sub">rare disease population</div>
-      <div class="st-delta up">▲ 0.3% vs 2020</div>
-    </div>
-    <div class="stat-tile">
-      <div class="st-label">Total DALYs (M)</div>
-      <div class="st-value">38.4M</div>
-      <div class="st-sub">genetic conditions</div>
-    </div>
-    <div class="stat-tile">
-      <div class="st-label">Actionable Genes</div>
-      <div class="st-value">327</div>
-      <div class="st-sub">ACMG SF v3.2</div>
-      <div class="st-delta down">▼ Better evidence</div>
-    </div>
-  </div>
 
-  <!-- Filters -->
-  <div class="filter-bar">
-    <label>Disease</label>
-    <select id="b-disease" onchange="updateBurden()">
-      <option value="">All Diseases</option>
-      <option>Cystic Fibrosis</option>
-      <option>Sickle Cell Disease</option>
-      <option>Thalassemia</option>
-      <option>Phenylketonuria</option>
-      <option>Huntington Disease</option>
-      <option>BRCA-related Cancer</option>
-      <option>Familial Hypercholesterolemia</option>
-    </select>
-    <span class="filter-sep">|</span>
-    <label>Metric</label>
-    <select id="b-metric" onchange="updateBurden()">
-      <option value="prevalence">Prevalence (per 100k)</option>
-      <option value="incidence">Incidence (per 100k)</option>
-      <option value="mortality">Mortality (per 100k)</option>
-      <option value="daly">DALYs (thousands)</option>
-    </select>
-    <span class="filter-sep">|</span>
-    <label>Category</label>
-    <select id="b-category" onchange="updateBurden()">
-      <option value="">All</option>
-      <option>Rare (&lt;1:2000)</option>
-      <option>Ultra-rare (&lt;1:50000)</option>
-      <option>Common</option>
-    </select>
-    <span class="filter-sep">|</span>
-    <label>Inheritance</label>
-    <select id="b-inherit" onchange="updateBurden()">
-      <option value="">All</option>
-      <option>Autosomal Dominant</option>
-      <option>Autosomal Recessive</option>
-      <option>X-linked</option>
-      <option>Mitochondrial</option>
-    </select>
-  </div>
+    <div class="card">
+      <div class="map-title" id="mapTitle">Prevalence Map</div>
+      <div id="map"></div>
+      <div class="map-legend" id="mapLegend"></div>
+      <p style="font-size:11px;color:var(--gray);margin-top:8px">
+        ℹ️ Circle size and color indicate relative prevalence. Click markers for details.
+        <!-- TODO: Replace with real data from WHO/IHME GBD API or Orphanet prevalence data -->
+      </p>
+    </div>
 
-  <!-- Map + region cards -->
-  <div class="grid-2" style="align-items:start;">
-    <div class="card" style="grid-column:1/-1;">
-      <div class="card-title"><span class="dot-accent" style="background:var(--teal)"></span>Global Prevalence Map</div>
-      <div style="position:relative;">
-        <svg id="world-map-svg" viewBox="0 0 800 380" xmlns="http://www.w3.org/2000/svg"></svg>
-        <div class="map-tooltip" id="map-tooltip"></div>
-        <!-- Legend -->
-        <div style="display:flex;align-items:center;gap:8px;margin-top:10px;font-size:11px;color:var(--gray3);">
-          <span>Low</span>
-          <div style="display:flex;gap:2px;">
-            <div style="width:20px;height:10px;background:#1a3a4a;border-radius:2px;"></div>
-            <div style="width:20px;height:10px;background:#1a5060;border-radius:2px;"></div>
-            <div style="width:20px;height:10px;background:#1a6870;border-radius:2px;"></div>
-            <div style="width:20px;height:10px;background:#2dd4bf;border-radius:2px;opacity:.6;"></div>
-            <div style="width:20px;height:10px;background:#2dd4bf;border-radius:2px;"></div>
-          </div>
-          <span>High</span>
-          <span style="margin-left:12px;">Prevalence per 100k</span>
-        </div>
+    <div class="grid-2 section-gap">
+      <div class="card">
+        <div class="card-title" style="margin-bottom:10px">Regional Prevalence Table</div>
+        <div class="table-wrap" id="prevalenceTable"></div>
+      </div>
+      <div class="card">
+        <div class="card-title" style="margin-bottom:10px">Population Enrichment Notes</div>
+        <div id="enrichmentNotes" style="font-size:13px;color:var(--white);line-height:1.7"></div>
       </div>
     </div>
   </div>
 
-  <!-- Region Cards -->
-  <div class="card">
-    <div class="card-title"><span class="dot-accent" style="background:var(--purple)"></span>Burden by World Region</div>
-    <div class="region-grid" id="region-cards"></div>
-  </div>
-
-  <!-- Burden chart -->
-  <div class="grid-2">
-    <div class="card">
-      <div class="card-title"><span class="dot-accent" style="background:var(--amber)"></span>Top 10 Diseases by DALYs</div>
-      <div class="chart-wrap" style="height:280px;"><canvas id="daly-chart"></canvas></div>
-    </div>
-    <div class="card">
-      <div class="card-title"><span class="dot-accent" style="background:var(--teal)"></span>Regional Burden Distribution</div>
-      <div class="chart-wrap" style="height:280px;"><canvas id="region-chart"></canvas></div>
-    </div>
-  </div>
-</section>
-
-<!-- ══════════════════════════════════════════════════════ PANEL 2 · ALLELE -->
-<section id="panel-allele" class="panel">
-  <div class="panel-header">
-    <div>
-      <div class="panel-title">📊 Allele Frequency Explorer</div>
-      <div class="panel-subtitle">Population allele frequencies, pathogenicity, carrier rates &amp; evidence levels</div>
-    </div>
-  </div>
-
-  <div class="grid-4">
-    <div class="stat-tile">
-      <div class="st-label">Variants Indexed</div>
-      <div class="st-value">18,204</div>
-      <div class="st-sub">gnomAD v4 (mock)</div>
-    </div>
-    <div class="stat-tile">
-      <div class="st-label">Pathogenic Variants</div>
-      <div class="st-value">3,847</div>
-      <div class="st-sub">P / LP classified</div>
-    </div>
-    <div class="stat-tile">
-      <div class="st-label">VUS</div>
-      <div class="st-value">6,120</div>
-      <div class="st-sub">uncertain significance</div>
-    </div>
-    <div class="stat-tile">
-      <div class="st-label">Populations</div>
-      <div class="st-value">8</div>
-      <div class="st-sub">ancestry groups</div>
-    </div>
-  </div>
-
-  <div class="filter-bar">
-    <label>Gene</label>
-    <select id="af-gene" onchange="updateAllele()">
-      <option value="">All Genes</option>
-      <option>CFTR</option><option>BRCA1</option><option>BRCA2</option>
-      <option>HBB</option><option>HEXA</option><option>GBA</option>
-      <option>LDLR</option><option>PCSK9</option><option>HTT</option>
-      <option>FMR1</option>
-    </select>
-    <span class="filter-sep">|</span>
-    <label>Pathogenicity</label>
-    <select id="af-path" onchange="updateAllele()">
-      <option value="">All</option>
-      <option>Pathogenic</option>
-      <option>Likely Pathogenic</option>
-      <option>VUS</option>
-      <option>Benign</option>
-    </select>
-    <span class="filter-sep">|</span>
-    <label>Population</label>
-    <select id="af-pop" onchange="updateAllele()">
-      <option value="">All Populations</option>
-      <option>European (Non-Finnish)</option>
-      <option>African/African American</option>
-      <option>East Asian</option>
-      <option>South Asian</option>
-      <option>Latino/Admixed American</option>
-      <option>Ashkenazi Jewish</option>
-      <option>Finnish</option>
-      <option>Middle Eastern</option>
-    </select>
-    <span class="filter-sep">|</span>
-    <label>Min AF</label>
-    <input type="text" id="af-min" placeholder="e.g. 0.001" style="width:90px;">
-  </div>
-
-  <div class="grid-2">
-    <div class="card" style="grid-column:1/-1;">
-      <div class="card-title"><span class="dot-accent" style="background:var(--teal)"></span>Variant Table</div>
-      <div class="table-wrap" id="allele-table-wrap"></div>
-    </div>
-  </div>
-
-  <div class="grid-2">
-    <div class="card">
-      <div class="card-title"><span class="dot-accent" style="background:var(--purple)"></span>Allele Frequency Across Populations</div>
-      <div class="chart-wrap" style="height:300px;"><canvas id="af-pop-chart"></canvas></div>
-    </div>
-    <div class="card">
-      <div class="card-title"><span class="dot-accent" style="background:var(--amber)"></span>Pathogenicity Distribution</div>
-      <div class="chart-wrap" style="height:300px;"><canvas id="af-path-chart"></canvas></div>
-    </div>
-  </div>
-</section>
-
-<!-- ══════════════════════════════════════════════════════ PANEL 3 · RARE -->
-<section id="panel-rare" class="panel">
-  <div class="panel-header">
-    <div>
-      <div class="panel-title">🧬 Rare Disease Explorer</div>
-      <div class="panel-subtitle">Regional distribution, founder variants, prevalence &amp; diagnostic landscape</div>
-    </div>
-  </div>
-
-  <div class="grid-4">
-    <div class="stat-tile">
-      <div class="st-label">Rare Diseases</div>
-      <div class="st-value">7,000+</div>
-      <div class="st-sub">globally recognized</div>
-    </div>
-    <div class="stat-tile">
-      <div class="st-label">Genetic Origin</div>
-      <div class="st-value">72%</div>
-      <div class="st-sub">of rare diseases</div>
-    </div>
-    <div class="stat-tile">
-      <div class="st-label">Diagnosed &lt;1yr</div>
-      <div class="st-value">30%</div>
-      <div class="st-sub">avg time to diagnosis</div>
-    </div>
-    <div class="stat-tile">
-      <div class="st-label">With Treatment</div>
-      <div class="st-value">5%</div>
-      <div class="st-sub">approved therapies</div>
-    </div>
-  </div>
-
-  <div class="filter-bar">
-    <label>Region</label>
-    <select id="rd-region" onchange="updateRare()">
-      <option value="">All Regions</option>
-      <option>Europe</option><option>North America</option>
-      <option>East Asia</option><option>South Asia</option>
-      <option>Sub-Saharan Africa</option><option>Middle East</option>
-      <option>Latin America</option><option>Oceania</option>
-    </select>
-    <span class="filter-sep">|</span>
-    <label>Inheritance</label>
-    <select id="rd-inherit" onchange="updateRare()">
-      <option value="">All</option>
-      <option>Autosomal Dominant</option>
-      <option>Autosomal Recessive</option>
-      <option>X-linked Recessive</option>
-      <option>Mitochondrial</option>
-    </select>
-    <span class="filter-sep">|</span>
-    <label>Onset</label>
-    <select id="rd-onset" onchange="updateRare()">
-      <option value="">All Ages</option>
-      <option>Neonatal</option><option>Infantile</option>
-      <option>Childhood</option><option>Adult</option>
-    </select>
-    <span class="filter-sep">|</span>
-    <label>Search</label>
-    <input type="text" id="rd-search" placeholder="Disease or gene…" style="width:140px;" oninput="updateRare()">
-  </div>
-
-  <div class="card">
-    <div class="card-title"><span class="dot-accent" style="background:var(--teal)"></span>Rare Disease Database</div>
-    <div class="table-wrap" id="rare-table-wrap"></div>
-  </div>
-
-  <div class="grid-2">
-    <div class="card">
-      <div class="card-title"><span class="dot-accent" style="background:var(--purple)"></span>Diseases by Region</div>
-      <div class="chart-wrap" style="height:270px;"><canvas id="rd-region-chart"></canvas></div>
-    </div>
-    <div class="card">
-      <div class="card-title"><span class="dot-accent" style="background:var(--amber)"></span>Inheritance Mode Distribution</div>
-      <div class="chart-wrap" style="height:270px;"><canvas id="rd-inherit-chart"></canvas></div>
-    </div>
-  </div>
-</section>
-
-<!-- ══════════════════════════════════════════════════════ PANEL 4 · G→P -->
-<section id="panel-gp" class="panel">
-  <div class="panel-header">
-    <div>
-      <div class="panel-title">🔗 Genotype–Phenotype Relationships</div>
-      <div class="panel-subtitle">Gene → Variant → Disease → Phenotype, penetrance, expressivity &amp; clinical notes</div>
-    </div>
-  </div>
-
-  <div class="filter-bar">
-    <label>Gene</label>
-    <select id="gp-gene" onchange="updateGP()">
-      <option value="">Select Gene</option>
-      <option>CFTR</option><option>BRCA1</option><option>BRCA2</option>
-      <option>HBB</option><option>HEXA</option><option>GBA</option>
-      <option>LDLR</option><option>HTT</option><option>FMR1</option>
-      <option>RB1</option><option>TP53</option><option>MLH1</option>
-    </select>
-    <span class="filter-sep">|</span>
-    <label>Penetrance</label>
-    <select id="gp-pen" onchange="updateGP()">
-      <option value="">All</option>
-      <option>High (&gt;80%)</option>
-      <option>Moderate (40–80%)</option>
-      <option>Low (&lt;40%)</option>
-    </select>
-    <span class="filter-sep">|</span>
-    <label>Severity</label>
-    <select id="gp-sev" onchange="updateGP()">
-      <option value="">All</option>
-      <option>Severe</option><option>Moderate</option><option>Mild</option>
-    </select>
-  </div>
-
-  <div id="gp-cards-wrap"></div>
-</section>
-
-<!-- ══════════════════════════════════════════════════════ PANEL 5 · ACTIONABLE -->
-<section id="panel-actionable" class="panel">
-  <div class="panel-header">
-    <div>
-      <div class="panel-title">⚕️ Actionable Variants</div>
-      <div class="panel-subtitle">Clinically actionable variants with screening, treatment, pharmacogenomics &amp; evidence</div>
-    </div>
-  </div>
-
-  <div class="grid-4">
-    <div class="stat-tile">
-      <div class="st-label">ACMG SF v3.2</div>
-      <div class="st-value">81</div>
-      <div class="st-sub">actionable genes</div>
-    </div>
-    <div class="stat-tile">
-      <div class="st-label">CPIC Guidelines</div>
-      <div class="st-value">24</div>
-      <div class="st-sub">gene-drug pairs</div>
-    </div>
-    <div class="stat-tile">
-      <div class="st-label">High Evidence</div>
-      <div class="st-value">47</div>
-      <div class="st-sub">variants in dataset</div>
-    </div>
-    <div class="stat-tile">
-      <div class="st-label">Needs Review</div>
-      <div class="st-value">12</div>
-      <div class="st-sub">conflicting evidence</div>
-    </div>
-  </div>
-
-  <div class="filter-bar">
-    <label>Actionability</label>
-    <select id="av-type" onchange="updateActionable()">
-      <option value="">All Types</option>
-      <option>Treatment</option>
-      <option>Screening</option>
-      <option>Prevention</option>
-      <option>Pharmacogenomic</option>
-      <option>Drug Avoidance</option>
-    </select>
-    <span class="filter-sep">|</span>
-    <label>Guideline</label>
-    <select id="av-guide" onchange="updateActionable()">
-      <option value="">All Guidelines</option>
-      <option>ACMG</option><option>CPIC</option>
-      <option>ClinGen</option><option>ESMO</option>
-    </select>
-    <span class="filter-sep">|</span>
-    <label>Evidence</label>
-    <select id="av-ev" onchange="updateActionable()">
-      <option value="">All</option>
-      <option>High</option><option>Moderate</option><option>Limited</option>
-    </select>
-  </div>
-
-  <div class="card">
-    <div class="card-title"><span class="dot-accent" style="background:var(--teal)"></span>Actionable Variant Registry</div>
-    <div class="table-wrap" id="av-table-wrap"></div>
-  </div>
-
-  <div class="grid-2">
-    <div class="card">
-      <div class="card-title"><span class="dot-accent" style="background:var(--purple)"></span>Actionability by Type</div>
-      <div class="chart-wrap" style="height:260px;"><canvas id="av-type-chart"></canvas></div>
-    </div>
-    <div class="card">
-      <div class="card-title"><span class="dot-accent" style="background:var(--amber)"></span>Evidence Strength</div>
-      <div class="chart-wrap" style="height:260px;"><canvas id="av-ev-chart"></canvas></div>
-    </div>
-  </div>
-</section>
-
-<!-- ══════════════════════════════════════════════════════ PANEL 6 · PRIORITY -->
-<section id="panel-priority" class="panel">
-  <div class="panel-header">
-    <div>
-      <div class="panel-title">🎯 Research Priority Matrix</div>
-      <div class="panel-subtitle">Evidence gaps, underrepresented populations &amp; high-burden under-studied diseases</div>
-    </div>
-  </div>
-
-  <div class="card" style="background:rgba(139,92,246,.06);border-color:rgba(139,92,246,.25);">
-    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
-      <div style="font-size:13px;color:var(--gray2);flex:1;">
-        <strong style="color:var(--purple);">Research Priority Score</strong> combines five axes:
-        <span class="badge badge-amber" style="margin:0 4px;">Burden</span>
-        <span class="badge badge-teal" style="margin:0 4px;">Allele Freq</span>
-        <span class="badge badge-purple" style="margin:0 4px;">Actionability</span>
-        <span class="badge badge-red" style="margin:0 4px;">Evidence Gap</span>
-        <span class="badge badge-gray" style="margin:0 4px;">Pop. Underrep.</span>
-        — higher = more urgent need for research.
+  <!-- ===== TAB 3: ALLELE FREQUENCIES ===== -->
+  <div id="tab-allele" class="tab-panel">
+    <div class="grid-2" style="margin-bottom:16px">
+      <div class="card">
+        <div class="card-title" style="margin-bottom:10px">Allele Frequency by Population</div>
+        <div class="chart-wrap"><canvas id="alleleChart"></canvas></div>
+        <!-- TODO: Replace with gnomAD API v3.1 allele frequency endpoint -->
       </div>
-    </div>
-  </div>
-
-  <div class="filter-bar">
-    <label>Sort by</label>
-    <select id="pr-sort" onchange="updatePriority()">
-      <option value="total">Total Score</option>
-      <option value="burden">Burden</option>
-      <option value="evidence_gap">Evidence Gap</option>
-      <option value="pop_underrep">Pop. Underrep.</option>
-      <option value="vus_count">VUS Count</option>
-    </select>
-    <span class="filter-sep">|</span>
-    <label>Category</label>
-    <select id="pr-cat" onchange="updatePriority()">
-      <option value="">All</option>
-      <option>Rare Disease</option>
-      <option>Pharmacogenomics</option>
-      <option>Cancer Predisposition</option>
-      <option>Cardiovascular</option>
-      <option>Metabolic</option>
-    </select>
-  </div>
-
-  <div class="grid-2">
-    <div class="card" style="grid-column:1/-1;">
-      <div class="card-title"><span class="dot-accent" style="background:var(--amber)"></span>Priority Rankings</div>
-      <div id="priority-list"></div>
-    </div>
-  </div>
-
-  <div class="grid-2">
-    <div class="card">
-      <div class="card-title"><span class="dot-accent" style="background:var(--red)"></span>Score Breakdown (Top 8)</div>
-      <div class="chart-wrap" style="height:300px;"><canvas id="priority-chart"></canvas></div>
-    </div>
-    <div class="card">
-      <div class="card-title"><span class="dot-accent" style="background:var(--purple)"></span>Population Underrepresentation</div>
-      <div class="chart-wrap" style="height:300px;"><canvas id="pop-underrep-chart"></canvas></div>
-    </div>
-  </div>
-</section>
-
-</main>
-</div><!-- #layout -->
-
-<script>
-/* ════════════════════════════════════════════════════════════════════
-   MOCK DATA
-════════════════════════════════════════════════════════════════════ */
-const REGIONS = [
-  { name:"Europe",            prevalence:380, incidence:28, mortality:12, daly:4200 },
-  { name:"North America",     prevalence:420, incidence:32, mortality:15, daly:5100 },
-  { name:"East Asia",         prevalence:310, incidence:22, mortality: 9, daly:6800 },
-  { name:"South Asia",        prevalence:510, incidence:45, mortality:22, daly:9200 },
-  { name:"Sub-Saharan Africa",prevalence:680, incidence:62, mortality:35, daly:12400},
-  { name:"Latin America",     prevalence:390, incidence:30, mortality:13, daly:4800 },
-  { name:"Middle East",       prevalence:440, incidence:38, mortality:18, daly:3900 },
-  { name:"Oceania",           prevalence:290, incidence:20, mortality: 8, daly:1200 },
-];
-
-const DALY_DATA = {
-  labels: ["Sickle Cell Disease","Thalassemia","Cystic Fibrosis","PKU","BRCA Cancer","FH","Huntington","Gaucher","Fragile X","Duchenne MD"],
-  values: [14200, 9800, 6400, 4100, 8700, 11200, 3200, 1800, 2600, 4900]
-};
-
-const ALLELE_DATA = [
-  { gene:"CFTR",  variant:"c.1521_1523delCTT (F508del)", population:"European (Non-Finnish)", af:0.0229, carrier_freq:"1:22", pathogenicity:"Pathogenic",       evidence:"High",     disease:"Cystic Fibrosis" },
-  { gene:"CFTR",  variant:"c.1624G>T (G542X)",           population:"European (Non-Finnish)", af:0.0031, carrier_freq:"1:160", pathogenicity:"Pathogenic",      evidence:"High",     disease:"Cystic Fibrosis" },
-  { gene:"HBB",   variant:"c.20A>T (HbS)",               population:"African/African American", af:0.0470, carrier_freq:"1:11", pathogenicity:"Pathogenic",     evidence:"High",     disease:"Sickle Cell Disease" },
-  { gene:"HBB",   variant:"c.92+5G>C (IVS1-5)",         population:"South Asian",            af:0.0380, carrier_freq:"1:13", pathogenicity:"Pathogenic",       evidence:"High",     disease:"Beta-thalassemia" },
-  { gene:"HEXA",  variant:"c.1274_1277dupTATC",          population:"Ashkenazi Jewish",       af:0.0333, carrier_freq:"1:15", pathogenicity:"Pathogenic",       evidence:"High",     disease:"Tay-Sachs" },
-  { gene:"GBA",   variant:"c.1226A>G (N370S)",           population:"Ashkenazi Jewish",       af:0.0300, carrier_freq:"1:17", pathogenicity:"Pathogenic",       evidence:"High",     disease:"Gaucher Disease" },
-  { gene:"BRCA1", variant:"c.5266dupC (5382insC)",       population:"Ashkenazi Jewish",       af:0.0100, carrier_freq:"1:50", pathogenicity:"Pathogenic",       evidence:"High",     disease:"Hereditary Breast/Ovarian Ca." },
-  { gene:"BRCA2", variant:"c.5946delT (6174delT)",       population:"Ashkenazi Jewish",       af:0.0130, carrier_freq:"1:38", pathogenicity:"Pathogenic",       evidence:"High",     disease:"Hereditary Breast/Ovarian Ca." },
-  { gene:"LDLR",  variant:"c.2140+1G>A",                 population:"Lebanese",               af:0.0250, carrier_freq:"1:20", pathogenicity:"Pathogenic",       evidence:"High",     disease:"Familial Hypercholesterolemia" },
-  { gene:"PCSK9", variant:"c.381T>A (Y142X)",            population:"African/African American", af:0.0200, carrier_freq:"1:25", pathogenicity:"Likely Pathogenic",evidence:"Moderate",disease:"Familial Hypercholesterolemia" },
-  { gene:"HTT",   variant:"CAG repeat expansion (>36)",  population:"European (Non-Finnish)", af:0.0001, carrier_freq:"1:5k", pathogenicity:"Pathogenic",       evidence:"High",     disease:"Huntington Disease" },
-  { gene:"FMR1",  variant:"CGG repeat expansion (>200)", population:"All",                    af:0.0004, carrier_freq:"1:1.3k", pathogenicity:"Pathogenic",     evidence:"High",     disease:"Fragile X Syndrome" },
-  { gene:"BRCA1", variant:"c.5095C>T (R1699W)",          population:"East Asian",             af:0.0002, carrier_freq:"1:2.5k", pathogenicity:"VUS",            evidence:"Limited",  disease:"Breast/Ovarian Cancer risk" },
-  { gene:"GBA",   variant:"c.1448T>C (L444P)",           population:"All",                    af:0.0012, carrier_freq:"1:416", pathogenicity:"Pathogenic",      evidence:"High",     disease:"Gaucher / Parkinson risk" },
-  { gene:"MLH1",  variant:"c.2T>C (p.Met1?)",            population:"European",               af:0.0001, carrier_freq:"1:5k", pathogenicity:"Likely Pathogenic",evidence:"Moderate",disease:"Lynch Syndrome" },
-  { gene:"TP53",  variant:"c.817C>T (R273C)",            population:"All",                    af:0.0003, carrier_freq:"N/A",  pathogenicity:"Pathogenic",       evidence:"High",     disease:"Li-Fraumeni Syndrome" },
-];
-
-const RARE_DISEASES = [
-  { name:"Cystic Fibrosis",              gene:"CFTR",  inherit:"Autosomal Recessive", prevalence:"1:2,500",  region:"Europe/North America", founder:"F508del (EU)", onset:"Neonatal",   diagnostic:"Widely available" },
-  { name:"Sickle Cell Disease",          gene:"HBB",   inherit:"Autosomal Recessive", prevalence:"1:400",    region:"Sub-Saharan Africa",   founder:"HbS (West Africa)", onset:"Infantile",  diagnostic:"Available" },
-  { name:"Beta-Thalassemia",             gene:"HBB",   inherit:"Autosomal Recessive", prevalence:"1:100,000",region:"South Asia / Mediterranean", founder:"IVS1-5 (SA)", onset:"Infantile", diagnostic:"Available" },
-  { name:"Tay-Sachs Disease",            gene:"HEXA",  inherit:"Autosomal Recessive", prevalence:"1:3,500",  region:"Ashkenazi Jewish",     founder:"TATC dup (AJ)", onset:"Infantile",  diagnostic:"Carrier screening" },
-  { name:"Gaucher Disease Type 1",       gene:"GBA",   inherit:"Autosomal Recessive", prevalence:"1:850",    region:"Ashkenazi Jewish",     founder:"N370S (AJ)",    onset:"Adult",      diagnostic:"Enzyme assay" },
-  { name:"Phenylketonuria",              gene:"PAH",   inherit:"Autosomal Recessive", prevalence:"1:10,000", region:"Europe / Middle East", founder:"R408W (EU)",    onset:"Neonatal",   diagnostic:"Newborn screening" },
-  { name:"Fragile X Syndrome",           gene:"FMR1",  inherit:"X-linked Dominant",   prevalence:"1:4,000",  region:"All",                  founder:"CGG expansion", onset:"Childhood",  diagnostic:"PCR testing" },
-  { name:"Huntington Disease",           gene:"HTT",   inherit:"Autosomal Dominant",  prevalence:"1:10,000", region:"Europe / North America",founder:"CAG expansion", onset:"Adult",      diagnostic:"Genetic testing" },
-  { name:"Familial Hypercholesterolemia",gene:"LDLR",  inherit:"Autosomal Dominant",  prevalence:"1:250",    region:"All (Middle East elevated)", founder:"Lebanese",  onset:"Adult",  diagnostic:"Widespread" },
-  { name:"Duchenne Muscular Dystrophy",  gene:"DMD",   inherit:"X-linked Recessive",  prevalence:"1:5,000",  region:"All",                  founder:"Various",       onset:"Childhood",  diagnostic:"Genetic / CK" },
-  { name:"Pompe Disease",                gene:"GAA",   inherit:"Autosomal Recessive", prevalence:"1:40,000", region:"Taiwan / Netherlands", founder:"c.-32-13T>G", onset:"Neonatal",   diagnostic:"NBS available" },
-  { name:"Wilson Disease",               gene:"ATP7B", inherit:"Autosomal Recessive", prevalence:"1:30,000", region:"East Asia",            founder:"Arg778Leu (EA)", onset:"Childhood",  diagnostic:"Copper studies" },
-  { name:"Spinal Muscular Atrophy",      gene:"SMN1",  inherit:"Autosomal Recessive", prevalence:"1:10,000", region:"All",                  founder:"Exon 7 del",    onset:"Infantile",  diagnostic:"NBS expanding" },
-  { name:"Marfan Syndrome",              gene:"FBN1",  inherit:"Autosomal Dominant",  prevalence:"1:5,000",  region:"All",                  founder:"Various",       onset:"Childhood",  diagnostic:"Clinical + genetic" },
-  { name:"Achondroplasia",               gene:"FGFR3", inherit:"Autosomal Dominant",  prevalence:"1:25,000", region:"All",                  founder:"p.G380R (85%)", onset:"Neonatal",   diagnostic:"Genetic testing" },
-];
-
-const GP_DATA = [
-  {
-    gene:"CFTR", disease:"Cystic Fibrosis", inheritance:"AR",
-    variants:[
-      { hgvs:"c.1521_1523delCTT", protein:"p.Phe508del", class:"Pathogenic", penetrance:"~100%", expressivity:"Variable" },
-      { hgvs:"c.1624G>T",         protein:"p.Gly542X",  class:"Pathogenic", penetrance:"~100%", expressivity:"Severe" },
-      { hgvs:"c.350G>A",          protein:"p.Arg117His", class:"Pathogenic", penetrance:"Reduced",expressivity:"Mild/CBAVD" },
-    ],
-    phenotypes:["Chronic lung disease","Pancreatic insufficiency","Male infertility","Recurrent sinusitis","Elevated sweat chloride","Meconium ileus"],
-    severity:"Severe", penetrance:"High (>95%)", expressivity:"Variable",
-    notes:"Most common variant F508del accounts for ~70% of CF alleles in Europeans. Pancreatic sufficiency correlates with milder variants. Modulator therapy (CFTR modulators) available for many variants."
-  },
-  {
-    gene:"BRCA1", disease:"Hereditary Breast/Ovarian Cancer", inheritance:"AD",
-    variants:[
-      { hgvs:"c.5266dupC",  protein:"p.Gln1756fs", class:"Pathogenic", penetrance:"72% lifetime", expressivity:"Breast/Ovary" },
-      { hgvs:"c.181T>G",    protein:"p.Cys61Gly",  class:"Pathogenic", penetrance:"65% lifetime", expressivity:"Breast/Ovary/Prostate" },
-    ],
-    phenotypes:["Breast cancer (female/male)","Ovarian cancer","Fallopian tube cancer","Peritoneal cancer","Pancreatic cancer risk"],
-    severity:"Severe (if cancer develops)", penetrance:"High (60–80%)", expressivity:"Variable age of onset",
-    notes:"BRCA1 pathogenic variants confer ~72% lifetime breast cancer risk and ~46% ovarian cancer risk. Risk-reducing surgery and intensive surveillance recommended. PARP inhibitors approved for BRCA1/2-mutant cancers."
-  },
-  {
-    gene:"HBB", disease:"Sickle Cell Disease / Beta-Thalassemia", inheritance:"AR",
-    variants:[
-      { hgvs:"c.20A>T",      protein:"p.Glu7Val (HbS)",  class:"Pathogenic", penetrance:"100% (homozygous)", expressivity:"Severe" },
-      { hgvs:"c.92+5G>C",    protein:"IVS1-5",           class:"Pathogenic", penetrance:"100%", expressivity:"Severe beta-thal" },
-      { hgvs:"c.19G>A",      protein:"p.Glu7Lys (HbC)",  class:"Pathogenic", penetrance:"High (compound het)", expressivity:"Moderate" },
-    ],
-    phenotypes:["Hemolytic anemia","Vaso-occlusive crises","Stroke","Acute chest syndrome","Splenic sequestration","Avascular necrosis","Infections"],
-    severity:"Severe", penetrance:"High (100% if homozygous)", expressivity:"Severity varies by genotype",
-    notes:"HbSS genotype causes classic SCD. HbSC and HbS/β-thal are milder. Gene therapy (betibeglogene) FDA-approved. Hydroxyurea reduces crises. Newborn screening enables early intervention."
-  },
-  {
-    gene:"HEXA", disease:"Tay-Sachs Disease", inheritance:"AR",
-    variants:[
-      { hgvs:"c.1274_1277dup",protein:"p.Tyr427Ilefs",  class:"Pathogenic", penetrance:"100%", expressivity:"Infantile lethal" },
-      { hgvs:"c.1421+1G>C",   protein:"Splice site",    class:"Pathogenic", penetrance:"100%", expressivity:"Infantile lethal" },
-    ],
-    phenotypes:["Progressive neurodegeneration","Cherry-red macula","Hypotonia then spasticity","Developmental regression","Seizures","Macrocephaly","Death in childhood"],
-    severity:"Lethal (infantile form)", penetrance:"100%", expressivity:"Age-dependent forms exist",
-    notes:"Infantile Tay-Sachs is universally fatal, typically by age 4–5. Late-onset forms (adult Tay-Sachs) have p.Gly269Ser variant and variable neurological involvement. No approved disease-modifying treatment; gene therapy in trials."
-  },
-  {
-    gene:"LDLR", disease:"Familial Hypercholesterolemia", inheritance:"AD",
-    variants:[
-      { hgvs:"c.2140+1G>A",  protein:"Splice donor",   class:"Pathogenic", penetrance:"High",   expressivity:"LDL elevation" },
-      { hgvs:"c.986G>A",     protein:"p.Cys329Tyr",    class:"Pathogenic", penetrance:"High",   expressivity:"Severe FH" },
-    ],
-    phenotypes:["Severely elevated LDL-C","Premature atherosclerosis","Xanthomas","Arcus corneae","Premature coronary artery disease"],
-    severity:"Moderate-Severe (if untreated)", penetrance:"High (>90%)", expressivity:"Variable by variant/environment",
-    notes:"FH affects ~1:250 globally, making it one of the most common genetic diseases. Statins, ezetimibe, PCSK9 inhibitors and lomitapide are used. LDL apheresis for severe cases. Cascade screening critical for family identification."
-  },
-];
-
-const ACTIONABLE = [
-  { gene:"BRCA1",  variant:"Any P/LP",  disease:"Hereditary Breast/Ovarian Cancer", action_type:"Screening/Prevention", recommendation:"Enhanced breast MRI + mammography; consider risk-reducing surgery", guideline:["ACMG","ClinGen"], evidence:"High",   drug_relevance:"PARP inhibitors (olaparib)",  badge:["ACMG actionable","ClinGen curated","High evidence"] },
-  { gene:"BRCA2",  variant:"Any P/LP",  disease:"Hereditary Breast/Ovarian Cancer", action_type:"Screening/Prevention", recommendation:"Enhanced surveillance; risk-reducing surgery after childbearing", guideline:["ACMG","ClinGen"], evidence:"High",  drug_relevance:"PARP inhibitors",            badge:["ACMG actionable","ClinGen curated","High evidence"] },
-  { gene:"MLH1",   variant:"Any P/LP",  disease:"Lynch Syndrome",                   action_type:"Screening",            recommendation:"Annual colonoscopy; aspirin prophylaxis", guideline:["ACMG"],         evidence:"High",   drug_relevance:"Checkpoint inhibitors",      badge:["ACMG actionable","High evidence"] },
-  { gene:"LDLR",   variant:"Any P/LP",  disease:"Familial Hypercholesterolemia",    action_type:"Treatment",            recommendation:"Statin therapy; LDL target <70 mg/dL", guideline:["ACMG"],          evidence:"High",   drug_relevance:"Statins, PCSK9i, ezetimibe", badge:["ACMG actionable","High evidence"] },
-  { gene:"RYR1",   variant:"Gain-of-function", disease:"Malignant Hyperthermia",    action_type:"Drug Avoidance",       recommendation:"Avoid halogenated anesthetics & succinylcholine; dantrolene on hand", guideline:["ACMG"], evidence:"High", drug_relevance:"Halothane AVOID; Dantrolene", badge:["ACMG actionable","High evidence"] },
-  { gene:"G6PD",   variant:"c.202G>A (A-)",   disease:"G6PD Deficiency",           action_type:"Pharmacogenomic",      recommendation:"Avoid oxidative drugs (primaquine, rasburicase)", guideline:["CPIC"],  evidence:"High",   drug_relevance:"Primaquine — AVOID; Rasburicase — AVOID", badge:["CPIC guideline","High evidence"] },
-  { gene:"CYP2C19",variant:"*2/*2 (PM)",      disease:"Clopidogrel resistance",     action_type:"Pharmacogenomic",      recommendation:"Use prasugrel or ticagrelor instead of clopidogrel", guideline:["CPIC"], evidence:"High",   drug_relevance:"Clopidogrel — use alternative",badge:["CPIC guideline","High evidence"] },
-  { gene:"TPMT",   variant:"*3A/*3A",         disease:"Thiopurine toxicity",        action_type:"Pharmacogenomic",      recommendation:"Reduce thiopurine dose by 10-fold or use alternative", guideline:["CPIC"],evidence:"High",   drug_relevance:"Azathioprine, 6-MP — dose reduce",badge:["CPIC guideline","High evidence"] },
-  { gene:"HBB",    variant:"c.20A>T (HbS hom)", disease:"Sickle Cell Disease",      action_type:"Treatment",            recommendation:"Hydroxyurea; voxelotor; crizanlizumab; gene therapy eligibility", guideline:["ACMG"], evidence:"High", drug_relevance:"Hydroxyurea; betibeglogene (gene therapy)", badge:["ACMG actionable","High evidence"] },
-  { gene:"CFTR",   variant:"F508del/F508del", disease:"Cystic Fibrosis",            action_type:"Treatment",            recommendation:"Elexacaftor/tezacaftor/ivacaftor (Trikafta); CFTR modulator",guideline:["ACMG"], evidence:"High", drug_relevance:"Trikafta (ETI) — approved",badge:["ACMG actionable","High evidence"] },
-  { gene:"APOB",   variant:"p.Arg3527Gln",   disease:"Familial DefectiveApoB-100", action_type:"Treatment",            recommendation:"Statin therapy; LDL goal <100 mg/dL",guideline:["ACMG"],           evidence:"Moderate", drug_relevance:"Statins",badge:["ACMG actionable","Moderate evidence"] },
-  { gene:"DPYD",   variant:"*2A/*2A",         disease:"Fluoropyrimidine toxicity",  action_type:"Pharmacogenomic",      recommendation:"Avoid 5-FU/capecitabine or reduce dose by 50% with monitoring",guideline:["CPIC","ESMO"], evidence:"High", drug_relevance:"5-Fluorouracil — AVOID; Capecitabine — AVOID", badge:["CPIC guideline","ESMO","High evidence"] },
-];
-
-const PRIORITY_DATA = [
-  { name:"Sickle Cell Disease",              gene:"HBB",    category:"Rare Disease",         burden:9.2, allele_freq:7.8, actionability:7.1, evidence_gap:6.8, pop_underrep:9.5, vus_count:42, total:0 },
-  { name:"G6PD Deficiency (Africa)",         gene:"G6PD",   category:"Pharmacogenomics",     burden:8.1, allele_freq:9.2, actionability:6.5, evidence_gap:7.9, pop_underrep:9.0, vus_count:28, total:0 },
-  { name:"Beta-Thalassemia (South Asia)",    gene:"HBB",    category:"Rare Disease",         burden:8.5, allele_freq:8.8, actionability:6.0, evidence_gap:6.2, pop_underrep:8.2, vus_count:55, total:0 },
-  { name:"DPYD Deficiency (non-European)",   gene:"DPYD",   category:"Pharmacogenomics",     burden:5.4, allele_freq:4.1, actionability:8.8, evidence_gap:9.2, pop_underrep:9.6, vus_count:18, total:0 },
-  { name:"Familial Hypercholesterolemia",    gene:"LDLR",   category:"Cardiovascular",       burden:8.8, allele_freq:8.5, actionability:9.0, evidence_gap:4.2, pop_underrep:6.0, vus_count:890, total:0 },
-  { name:"Pompe Disease (Asia-Pacific)",     gene:"GAA",    category:"Rare Disease",         burden:5.2, allele_freq:3.8, actionability:7.5, evidence_gap:8.4, pop_underrep:8.8, vus_count:140, total:0 },
-  { name:"Phenylketonuria (Middle East)",    gene:"PAH",    category:"Metabolic",            burden:6.0, allele_freq:5.5, actionability:8.5, evidence_gap:7.8, pop_underrep:7.9, vus_count:210, total:0 },
-  { name:"Lynch Syndrome (Sub-Saharan)",     gene:"MLH1",   category:"Cancer Predisposition",burden:7.2, allele_freq:2.8, actionability:9.2, evidence_gap:9.0, pop_underrep:9.8, vus_count:320, total:0 },
-  { name:"CYP2D6 Poor Metabolizers (EA)",   gene:"CYP2D6", category:"Pharmacogenomics",     burden:4.8, allele_freq:6.2, actionability:8.2, evidence_gap:8.8, pop_underrep:8.4, vus_count:65, total:0 },
-  { name:"Congenital Adrenal Hyperplasia",  gene:"CYP21A2",category:"Rare Disease",         burden:5.8, allele_freq:5.0, actionability:7.0, evidence_gap:7.5, pop_underrep:7.2, vus_count:88, total:0 },
-];
-// Compute totals
-PRIORITY_DATA.forEach(r => {
-  r.total = Math.round((r.burden + r.allele_freq + r.actionability + r.evidence_gap + r.pop_underrep) / 5 * 10) / 10;
-});
-
-/* ════════════════════════════════════════════════════════════════════
-   NAVIGATION
-════════════════════════════════════════════════════════════════════ */
-function switchPanel(id, el) {
-  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
-  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
-  document.getElementById('panel-'+id).classList.add('active');
-  el.classList.add('active');
-  // Lazy init charts on first visit
-  initPanel(id);
-}
-
-const panelInited = {};
-function initPanel(id) {
-  if (panelInited[id]) return;
-  panelInited[id] = true;
-  if (id === 'burden')    initBurden();
-  if (id === 'allele')    initAllele();
-  if (id === 'rare')      initRare();
-  if (id === 'gp')        initGP();
-  if (id === 'actionable')initActionable();
-  if (id === 'priority')  initPriority();
-}
-
-/* ════════════════════════════════════════════════════════════════════
-   CHART DEFAULTS
-════════════════════════════════════════════════════════════════════ */
-Chart.defaults.color = '#94a3b8';
-Chart.defaults.borderColor = '#243650';
-Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
-Chart.defaults.font.size = 12;
-
-function mkChart(id, cfg) {
-  const canvas = document.getElementById(id);
-  if (!canvas) return null;
-  if (canvas._chart) canvas._chart.destroy();
-  const chart = new Chart(canvas, cfg);
-  canvas._chart = chart;
-  return chart;
-}
-
-/* ════════════════════════════════════════════════════════════════════
-   PANEL 1 — BURDEN
-════════════════════════════════════════════════════════════════════ */
-function initBurden() {
-  drawWorldMap();
-  renderRegionCards('prevalence');
-  renderDalyChart();
-  renderRegionChart();
-}
-
-function updateBurden() {
-  const metric = document.getElementById('b-metric').value;
-  renderRegionCards(metric);
-}
-
-// Simple SVG world map with continent blobs
-function drawWorldMap() {
-  const svg = document.getElementById('world-map-svg');
-  // Simplified continent paths (approximate bounding regions)
-  const regions = [
-    { id:'north-america', label:'N. America', d:'M 80 60 L 200 55 L 220 80 L 230 130 L 200 170 L 160 180 L 120 200 L 90 180 L 70 140 L 60 90 Z', value: 420, cx:150, cy:125 },
-    { id:'south-america', label:'S. America', d:'M 140 210 L 200 200 L 230 220 L 240 260 L 230 310 L 200 340 L 170 330 L 145 300 L 130 260 Z', value: 390, cx:188, cy:270 },
-    { id:'europe',        label:'Europe',     d:'M 310 50 L 390 40 L 420 60 L 415 100 L 380 120 L 340 110 L 300 90 Z', value: 380, cx:363, cy:83 },
-    { id:'africa',        label:'Africa',     d:'M 310 120 L 420 110 L 450 140 L 460 200 L 440 270 L 400 310 L 360 310 L 320 280 L 300 220 L 295 160 Z', value: 680, cx:378, cy:210 },
-    { id:'middle-east',   label:'Mid. East',  d:'M 420 80 L 500 70 L 520 100 L 510 140 L 470 150 L 440 140 L 415 110 Z', value: 440, cx:468, cy:112 },
-    { id:'south-asia',    label:'S. Asia',    d:'M 520 110 L 620 100 L 640 130 L 630 180 L 580 200 L 540 190 L 515 160 Z', value: 510, cx:578, cy:152 },
-    { id:'east-asia',     label:'E. Asia',    d:'M 620 50 L 730 40 L 750 70 L 760 110 L 720 140 L 660 150 L 630 130 L 618 90 Z', value: 310, cx:690, cy:97 },
-    { id:'oceania',       label:'Oceania',    d:'M 660 240 L 760 230 L 780 260 L 770 290 L 720 300 L 670 285 Z', value: 290, cx:718, cy:265 },
-  ];
-
-  const maxVal = Math.max(...regions.map(r=>r.value));
-  const getColor = v => {
-    const t = v/maxVal;
-    if (t < .2) return '#1a3a4a';
-    if (t < .4) return '#1a5060';
-    if (t < .6) return '#1a6870';
-    if (t < .8) return 'rgba(45,212,191,.5)';
-    return 'rgba(45,212,191,.85)';
-  };
-
-  let html = '';
-  regions.forEach(r => {
-    html += `<path class="map-region" id="mr-${r.id}" d="${r.d}" fill="${getColor(r.value)}" stroke="#243650" stroke-width="1"
-      onmouseenter="showMapTip(event,'${r.label}',${r.value})" onmouseleave="hideMapTip()" onclick="filterByRegion('${r.label}')"/>`;
-    html += `<text x="${r.cx}" y="${r.cy}" text-anchor="middle" fill="rgba(255,255,255,.7)" font-size="9" pointer-events="none">${r.label}</text>`;
-    html += `<text x="${r.cx}" y="${r.cy+11}" text-anchor="middle" fill="rgba(255,255,255,.9)" font-size="8" font-weight="bold" pointer-events="none">${r.value}</text>`;
-  });
-  svg.innerHTML = html;
-}
-
-function showMapTip(e, label, value) {
-  const tip = document.getElementById('map-tooltip');
-  tip.innerHTML = `<strong>${label}</strong><br>Prevalence: <strong style="color:var(--teal)">${value}</strong> per 100k`;
-  tip.style.left = (e.offsetX+10)+'px';
-  tip.style.top  = (e.offsetY-40)+'px';
-  tip.style.opacity = '1';
-}
-function hideMapTip() {
-  document.getElementById('map-tooltip').style.opacity = '0';
-}
-function filterByRegion(label) {
-  // Future: filter region cards
-}
-
-function renderRegionCards(metric) {
-  const wrap = document.getElementById('region-cards');
-  const maxVal = Math.max(...REGIONS.map(r=>r[metric]));
-  wrap.innerHTML = REGIONS.map(r => {
-    const pct = Math.round((r[metric]/maxVal)*100);
-    const labels = { prevalence:'per 100k', incidence:'per 100k', mortality:'per 100k', daly:'thousands' };
-    return `<div class="region-card">
-      <div class="rc-region">${r.name}</div>
-      <div class="rc-value">${r[metric].toLocaleString()}</div>
-      <div class="rc-unit">${labels[metric]}</div>
-      <div class="rc-bar" style="width:${pct}%;"></div>
-    </div>`;
-  }).join('');
-}
-
-function renderDalyChart() {
-  mkChart('daly-chart', {
-    type: 'bar',
-    data: {
-      labels: DALY_DATA.labels.map(l => l.length>18 ? l.substring(0,18)+'…' : l),
-      datasets: [{
-        label: 'DALYs (thousands)',
-        data: DALY_DATA.values,
-        backgroundColor: [
-          '#2dd4bf','#8b5cf6','#f59e0b','#ef4444','#22c55e',
-          '#3b82f6','#ec4899','#14b8a6','#a78bfa','#fbbf24'
-        ],
-        borderWidth: 0, borderRadius: 4,
-      }]
-    },
-    options: {
-      indexAxis:'y', responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx=>`${ctx.raw.toLocaleString()} k DALYs` }}},
-      scales:{ x:{grid:{color:'#243650'}}, y:{grid:{color:'transparent'}} }
-    }
-  });
-}
-
-function renderRegionChart() {
-  mkChart('region-chart', {
-    type: 'radar',
-    data: {
-      labels: REGIONS.map(r=>r.name.split('/')[0].trim()),
-      datasets: [
-        { label:'Prevalence', data: REGIONS.map(r=>r.prevalence), borderColor:'#2dd4bf', backgroundColor:'rgba(45,212,191,.1)', pointBackgroundColor:'#2dd4bf' },
-        { label:'DALYs (k)',  data: REGIONS.map(r=>r.daly/100),   borderColor:'#8b5cf6', backgroundColor:'rgba(139,92,246,.1)', pointBackgroundColor:'#8b5cf6' },
-      ]
-    },
-    options: {
-      responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ labels:{ color:'#94a3b8' }}},
-      scales:{ r:{ grid:{ color:'#243650' }, ticks:{ display:false }, pointLabels:{ font:{size:10} }}}
-    }
-  });
-}
-
-/* ════════════════════════════════════════════════════════════════════
-   PANEL 2 — ALLELE FREQUENCY
-════════════════════════════════════════════════════════════════════ */
-function initAllele() {
-  renderAlleleTable(ALLELE_DATA);
-  renderAFPopChart();
-  renderAFPathChart();
-}
-function updateAllele() {
-  const gene = document.getElementById('af-gene').value;
-  const path = document.getElementById('af-path').value;
-  const pop  = document.getElementById('af-pop').value;
-  const min  = parseFloat(document.getElementById('af-min').value) || 0;
-  let data = ALLELE_DATA.filter(d =>
-    (!gene || d.gene === gene) &&
-    (!path || d.pathogenicity === path) &&
-    (!pop  || d.population === pop) &&
-    (d.af >= min)
-  );
-  renderAlleleTable(data);
-}
-function renderAlleleTable(data) {
-  const pathBadge = p => {
-    if (p==='Pathogenic') return `<span class="badge badge-red">${p}</span>`;
-    if (p==='Likely Pathogenic') return `<span class="badge badge-amber">${p}</span>`;
-    if (p==='VUS') return `<span class="badge badge-gray">${p}</span>`;
-    return `<span class="badge badge-green">${p}</span>`;
-  };
-  const evBadge = e => {
-    if (e==='High') return `<span class="badge badge-teal">High</span>`;
-    if (e==='Moderate') return `<span class="badge badge-purple">Mod</span>`;
-    return `<span class="badge badge-gray">Limited</span>`;
-  };
-  document.getElementById('allele-table-wrap').innerHTML = `
-  <table>
-    <thead><tr>
-      <th>Gene</th><th>Variant (HGVS)</th><th>Disease</th>
-      <th>Population</th><th>Allele Freq</th><th>Carrier Freq</th>
-      <th>Pathogenicity</th><th>Evidence</th>
-    </tr></thead>
-    <tbody>
-      ${data.map(d=>`<tr>
-        <td class="cell-gene">${d.gene}</td>
-        <td class="cell-variant">${d.variant}</td>
-        <td class="cell-disease">${d.disease}</td>
-        <td class="text-sm text-gray">${d.population}</td>
-        <td class="font-mono text-sm">${d.af.toFixed(4)}</td>
-        <td class="font-mono text-sm">${d.carrier_freq}</td>
-        <td>${pathBadge(d.pathogenicity)}</td>
-        <td>${evBadge(d.evidence)}</td>
-      </tr>`).join('')}
-    </tbody>
-  </table>`;
-}
-function renderAFPopChart() {
-  const pops = ['EUR','AFR','EAS','SAS','AMR','ASJ','FIN','MID'];
-  const mockAFs = {
-    'CFTR F508del': [0.0229, 0.0003, 0.0001, 0.0002, 0.0012, 0.0015, 0.0310, 0.0008],
-    'HBB HbS':      [0.0010, 0.0470, 0.0005, 0.0020, 0.0080, 0.0002, 0.0001, 0.0015],
-    'HEXA TATC dup':[0.0010, 0.0001, 0.0001, 0.0001, 0.0005, 0.0333, 0.0003, 0.0004],
-    'GBA N370S':    [0.0020, 0.0003, 0.0001, 0.0002, 0.0010, 0.0300, 0.0015, 0.0008],
-  };
-  mkChart('af-pop-chart', {
-    type:'bar',
-    data:{
-      labels:pops,
-      datasets: Object.entries(mockAFs).map(([label, data], i)=>({
-        label, data,
-        backgroundColor:['#2dd4bf','#8b5cf6','#f59e0b','#ef4444'][i],
-        borderWidth:0, borderRadius:3
-      }))
-    },
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ labels:{ color:'#94a3b8', boxWidth:12 }}},
-      scales:{
-        x:{grid:{color:'#243650'}},
-        y:{grid:{color:'#243650'}, ticks:{ callback: v=>v.toFixed(3)}}
-      }
-    }
-  });
-}
-function renderAFPathChart() {
-  const counts = {};
-  ALLELE_DATA.forEach(d=>{ counts[d.pathogenicity]=(counts[d.pathogenicity]||0)+1; });
-  mkChart('af-path-chart', {
-    type:'doughnut',
-    data:{
-      labels: Object.keys(counts),
-      datasets:[{
-        data: Object.values(counts),
-        backgroundColor:['#ef4444','#f59e0b','#94a3b8','#22c55e'],
-        borderColor:'#1a2d42', borderWidth:2
-      }]
-    },
-    options:{
-      responsive:true, maintainAspectRatio:false, cutout:'60%',
-      plugins:{ legend:{ position:'right', labels:{ color:'#94a3b8', boxWidth:12 }}}
-    }
-  });
-}
-
-/* ════════════════════════════════════════════════════════════════════
-   PANEL 3 — RARE DISEASE
-════════════════════════════════════════════════════════════════════ */
-function initRare() {
-  renderRareTable(RARE_DISEASES);
-  renderRDRegionChart();
-  renderRDInheritChart();
-}
-function updateRare() {
-  const region  = document.getElementById('rd-region').value;
-  const inherit = document.getElementById('rd-inherit').value;
-  const onset   = document.getElementById('rd-onset').value;
-  const search  = document.getElementById('rd-search').value.toLowerCase();
-  let data = RARE_DISEASES.filter(d=>
-    (!region  || d.region.includes(region)) &&
-    (!inherit || d.inherit === inherit) &&
-    (!onset   || d.onset === onset) &&
-    (!search  || d.name.toLowerCase().includes(search) || d.gene.toLowerCase().includes(search))
-  );
-  renderRareTable(data);
-}
-function renderRareTable(data) {
-  const inheritBadge = i => {
-    if (i.includes('Dominant')) return `<span class="badge badge-amber">${i.replace('Autosomal ','').replace('X-linked ','X-L ')}</span>`;
-    if (i.includes('Recessive')) return `<span class="badge badge-purple">${i.replace('Autosomal ','').replace('X-linked ','X-L ')}</span>`;
-    return `<span class="badge badge-teal">${i}</span>`;
-  };
-  const diagBadge = d => {
-    if (d.includes('Widely') || d.includes('Widespread')) return `<span class="badge badge-green">${d}</span>`;
-    if (d.includes('NBS') || d.includes('Available')) return `<span class="badge badge-teal">${d}</span>`;
-    return `<span class="badge badge-amber">${d}</span>`;
-  };
-  document.getElementById('rare-table-wrap').innerHTML = `
-  <table>
-    <thead><tr>
-      <th>Disease</th><th>Gene(s)</th><th>Inheritance</th>
-      <th>Prevalence</th><th>Region / Population</th><th>Founder Variant</th>
-      <th>Age of Onset</th><th>Diagnostics</th>
-    </tr></thead>
-    <tbody>${data.map(d=>`<tr>
-      <td class="cell-disease" style="font-weight:600">${d.name}</td>
-      <td class="cell-gene">${d.gene}</td>
-      <td>${inheritBadge(d.inherit)}</td>
-      <td class="font-mono text-sm">${d.prevalence}</td>
-      <td class="text-sm text-gray">${d.region}</td>
-      <td class="cell-variant">${d.founder}</td>
-      <td><span class="badge badge-navy">${d.onset}</span></td>
-      <td>${diagBadge(d.diagnostic)}</td>
-    </tr>`).join('')}</tbody>
-  </table>`;
-}
-function renderRDRegionChart() {
-  const counts = {};
-  RARE_DISEASES.forEach(d=>{
-    const r = d.region.split('/')[0].trim().split(' ').slice(0,2).join(' ');
-    counts[r]=(counts[r]||0)+1;
-  });
-  mkChart('rd-region-chart', {
-    type:'bar',
-    data:{
-      labels:Object.keys(counts),
-      datasets:[{ label:'Diseases', data:Object.values(counts),
-        backgroundColor:'rgba(139,92,246,.7)', borderWidth:0, borderRadius:4 }]
-    },
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{display:false}},
-      scales:{ x:{grid:{color:'transparent'}, ticks:{maxRotation:30}}, y:{grid:{color:'#243650'}} }
-    }
-  });
-}
-function renderRDInheritChart() {
-  const counts = {};
-  RARE_DISEASES.forEach(d=>{ counts[d.inherit]=(counts[d.inherit]||0)+1; });
-  mkChart('rd-inherit-chart', {
-    type:'pie',
-    data:{
-      labels:Object.keys(counts),
-      datasets:[{ data:Object.values(counts),
-        backgroundColor:['#8b5cf6','#2dd4bf','#f59e0b','#ef4444'],
-        borderColor:'#1a2d42', borderWidth:2 }]
-    },
-    options:{
-      responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ position:'right', labels:{ color:'#94a3b8', boxWidth:12, font:{size:11} }}}
-    }
-  });
-}
-
-/* ════════════════════════════════════════════════════════════════════
-   PANEL 4 — GENOTYPE–PHENOTYPE
-════════════════════════════════════════════════════════════════════ */
-function initGP() {
-  renderGPCards(GP_DATA);
-}
-function updateGP() {
-  const gene = document.getElementById('gp-gene').value;
-  const pen  = document.getElementById('gp-pen').value;
-  const sev  = document.getElementById('gp-sev').value;
-  let data = GP_DATA.filter(d=>
-    (!gene || d.gene===gene) &&
-    (!pen  || d.penetrance.includes(pen.replace(/[()%>]/g,'').split('–')[0].split(' ')[0])) &&
-    (!sev  || d.severity.includes(sev))
-  );
-  renderGPCards(data);
-}
-function renderGPCards(data) {
-  const wrap = document.getElementById('gp-cards-wrap');
-  if (!data.length) { wrap.innerHTML = '<div style="color:var(--gray3);padding:24px">No results match the selected filters.</div>'; return; }
-  wrap.innerHTML = data.map(d=>`
-  <div class="card" style="margin-bottom:16px;">
-    <div style="display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;margin-bottom:14px;">
-      <div>
-        <div style="font-size:18px;font-weight:700;color:var(--teal);">${d.gene}</div>
-        <div style="font-size:13px;color:var(--gray2);">Gene</div>
-      </div>
-      <div style="color:var(--gray3);font-size:20px;align-self:center;">→</div>
-      <div>
-        <div style="font-size:16px;font-weight:700;color:var(--white);">${d.disease}</div>
-        <div style="font-size:12px;color:var(--gray2);">${d.inheritance === 'AR' ? 'Autosomal Recessive' : d.inheritance === 'AD' ? 'Autosomal Dominant' : d.inheritance}</div>
-      </div>
-      <div style="margin-left:auto;display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start;">
-        <div class="stat-tile" style="padding:10px 14px;min-width:110px;">
-          <div class="st-label">Penetrance</div>
-          <div style="font-size:14px;font-weight:700;color:var(--amber);">${d.penetrance}</div>
-        </div>
-        <div class="stat-tile" style="padding:10px 14px;min-width:110px;">
-          <div class="st-label">Severity</div>
-          <div style="font-size:14px;font-weight:700;color:${d.severity.includes('Severe')?'var(--red)':'var(--amber)'};">${d.severity.split('(')[0].trim()}</div>
-        </div>
-        <div class="stat-tile" style="padding:10px 14px;min-width:130px;">
-          <div class="st-label">Expressivity</div>
-          <div style="font-size:13px;font-weight:600;color:var(--teal);">${d.expressivity}</div>
-        </div>
+      <div class="card">
+        <div class="card-title" style="margin-bottom:10px">Key Variant Summary</div>
+        <div id="variantSummary"></div>
       </div>
     </div>
 
-    <div class="tab-bar" id="tabs-${d.gene}">
-      <div class="tab-btn active" onclick="gpTab(this,'${d.gene}','variants')">Variants</div>
-      <div class="tab-btn" onclick="gpTab(this,'${d.gene}','phenotypes')">Phenotypes</div>
-      <div class="tab-btn" onclick="gpTab(this,'${d.gene}','notes')">Clinical Notes</div>
-    </div>
-
-    <div class="tab-panel active" id="${d.gene}-variants">
+    <div class="card">
+      <div class="card-title" style="margin-bottom:10px">Allele Frequency Table — <span id="alleleTableDisease" style="color:var(--white);text-transform:none;font-weight:400;font-size:13px"></span></div>
       <div class="table-wrap">
-        <table>
-          <thead><tr><th>HGVS Coding</th><th>Protein Change</th><th>Class</th><th>Penetrance</th><th>Expressivity</th></tr></thead>
-          <tbody>${d.variants.map(v=>`<tr>
-            <td class="cell-variant">${v.hgvs}</td>
-            <td class="cell-variant">${v.protein}</td>
-            <td><span class="badge ${v.class==='Pathogenic'?'badge-red':v.class==='Likely Pathogenic'?'badge-amber':'badge-gray'}">${v.class}</span></td>
-            <td class="text-sm">${v.penetrance}</td>
-            <td class="text-sm text-gray">${v.expressivity}</td>
-          </tr>`).join('')}</tbody>
+        <table id="alleleTable">
+          <thead>
+            <tr>
+              <th>Gene</th><th>Variant</th><th>Population / Ancestry</th>
+              <th>Allele Freq (AF)</th><th>Carrier Freq</th>
+              <th>Pathogenicity</th><th>Evidence</th>
+            </tr>
+          </thead>
+          <tbody id="alleleTableBody"></tbody>
         </table>
       </div>
+      <!-- TODO: Connect to gnomAD v3.1 API: https://gnomad.broadinstitute.org/api -->
     </div>
+  </div>
 
-    <div class="tab-panel" id="${d.gene}-phenotypes">
-      <div style="padding:4px 0;">
-        ${d.phenotypes.map(p=>`<span class="hpo-tag">${p}</span>`).join('')}
+  <!-- ===== TAB 4: ACTIONABLE VARIANTS ===== -->
+  <div id="tab-action" class="tab-panel">
+    <div style="margin-bottom:16px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px">
+      <div>
+        <div style="font-size:15px;font-weight:700;color:var(--white)" id="actionTitle"></div>
+        <div style="font-size:12px;color:var(--gray);margin-top:3px">Clinical actionability data per ACMG/ClinGen frameworks</div>
       </div>
+      <div id="actionBadges"></div>
     </div>
+    <div id="actionContent"></div>
+    <!-- TODO: Connect to ClinVar API, ClinGen Actionability Portal, CPIC API -->
+  </div>
 
-    <div class="tab-panel" id="${d.gene}-notes">
-      <div style="background:var(--navy3);border-radius:8px;padding:14px 16px;font-size:13px;color:var(--gray2);line-height:1.7;">${d.notes}</div>
+</main>
+
+<script>
+// ============================================================
+// CURATED DISEASE DATA
+// In production: replace each section with calls to:
+//   gnomAD (allele frequencies), ClinVar (variants),
+//   ClinGen (actionability), OMIM / Orphanet (disease info),
+//   HPO (phenotypes), WHO / IHME GBD (burden), CPIC / PharmGKB
+// ============================================================
+
+const DISEASES = {
+
+  marfan: {
+    name: "Marfan Syndrome",
+    desc: "A connective tissue disorder caused by pathogenic variants in FBN1, affecting the skeletal, ocular, and cardiovascular systems. Life-threatening aortic complications are the primary cause of premature mortality.",
+    inheritance: "Autosomal dominant",
+    genes: ["FBN1"],
+    keyVariants: ["FBN1 c.5788T>A (p.Cys1930Ser)", "FBN1 exon 25-27 deletions"],
+    prevalence: "1 in 5,000–10,000",
+    globalCases: "~750,000",
+    mostAffected: "Global — no ethnic predisposition",
+    mostAffectedSub: "Sporadic mutations account for ~25% of cases",
+    whoCategory: "Rare connective tissue disease",
+    orphanet: "ORPHA:558",
+    omim: "MIM: 154700",
+    actionabilityLevel: "High",
+    evidenceStrength: "high",
+    phenotypes: ["Aortic root dilation","Aortic dissection","Ectopia lentis","Tall stature / dolichostenomelia","Scoliosis","Pectus deformity","Dural ectasia","Mitral valve prolapse"],
+    genoPhenoNotes: "Missense variants causing dominant-negative effects (cysteine substitutions in EGF-like domains) are associated with more severe cardiovascular manifestations. Haploinsufficiency variants may present with milder or primarily skeletal features. Anticipation is not observed.",
+    clinActionSummary: "Annual aortic imaging surveillance; prophylactic aortic root replacement when diameter ≥ 4.5–5.0 cm; β-blocker or losartan therapy to slow aortic dilation. Ophthalmologic evaluation at diagnosis.",
+    enrichmentNotes: "No significant ethnic enrichment. Sporadic de novo mutations are common (~25%). Prevalence is roughly uniform worldwide at 1–2/10,000.",
+    mapData: [
+      { lat:40, lng:-100, region:"North America", prevalence:"1.5–2.0/10,000", cases:"~100,000", note:"Aortic surveillance guidelines well-established" },
+      { lat:54, lng:15, region:"Europe", prevalence:"1.5–2.0/10,000", cases:"~150,000", note:"National Marfan registries in UK, France, Germany" },
+      { lat:20, lng:80, region:"South Asia", prevalence:"1.0–1.5/10,000", cases:"~200,000", note:"Underdiagnosis common" },
+      { lat:-10, lng:25, region:"Sub-Saharan Africa", prevalence:"0.5–1.0/10,000", cases:"~60,000", note:"Limited diagnostic infrastructure" },
+      { lat:35, lng:105, region:"East Asia", prevalence:"1.0–1.5/10,000", cases:"~180,000", note:"Increasing awareness and registry data" },
+      { lat:-25, lng:-50, region:"Latin America", prevalence:"1.0–1.5/10,000", cases:"~55,000", note:"Variable access to cardiovascular surgery" },
+    ],
+    alleleFreqs: [
+      { gene:"FBN1", variant:"p.Cys1930Ser", pop:"European (non-Finnish)", af:"0.000002", carrier:"~1/500,000", path:"Pathogenic", evidence:"High" },
+      { gene:"FBN1", variant:"p.Arg2726Trp", pop:"Latino/Admixed American", af:"0.0000015", carrier:"~1/600,000", path:"Likely Pathogenic", evidence:"High" },
+      { gene:"FBN1", variant:"Various LOF", pop:"South Asian", af:"0.000003", carrier:"~1/300,000", path:"Pathogenic", evidence:"Moderate" },
+      { gene:"FBN1", variant:"Various LOF", pop:"East Asian", af:"0.0000025", carrier:"~1/400,000", path:"Pathogenic", evidence:"Moderate" },
+      { gene:"FBN1", variant:"Various LOF", pop:"African/African American", af:"0.000002", carrier:"~1/500,000", path:"Pathogenic", evidence:"Moderate" },
+    ],
+    chartPops: ["European","Latino","South Asian","East Asian","African"],
+    chartAFs: [0.0000020, 0.0000015, 0.0000030, 0.0000025, 0.0000020],
+    actionable: [
+      {
+        gene:"FBN1", variant:"Pathogenic / Likely Pathogenic variants (>3,000 known)",
+        significance:"Pathogenic", evidenceLevel:"High", actionability:"High",
+        badges:["ACMG Actionable","ClinGen Curated","High Evidence","Screening Available","Treatment Available"],
+        screening:"Annual echocardiogram + aortic MRI/CT; ophthalmology evaluation; skeletal assessment",
+        prevention:"Prophylactic aortic surgery at ≥4.5–5.0 cm; avoid contact sports and isometric exercise",
+        treatment:"β-blockers (atenolol, propranolol); ARBs (losartan); surgical aortic root replacement (Bentall procedure or valve-sparing)",
+        drugAvoidance:"Fluoroquinolones (↑ aortic rupture risk); stimulants",
+        pharmacogenomics:"N/A",
+        guideline:"2022 ACC/AHA Aortic Disease Guidelines; Marfan Foundation Guidelines"
+      }
+    ]
+  },
+
+  gaucher: {
+    name: "Gaucher Disease",
+    desc: "The most common lysosomal storage disorder, caused by biallelic pathogenic variants in GBA1 encoding glucocerebrosidase, leading to glucocerebroside accumulation in macrophages. Three clinical types (I, II, III) vary in severity and CNS involvement.",
+    inheritance: "Autosomal recessive",
+    genes: ["GBA1"],
+    keyVariants: ["GBA1 c.1226A>G (p.Asn409Ser / N370S)", "GBA1 c.1448T>C (p.Leu483Pro / L444P)"],
+    prevalence: "1 in 40,000 (general); up to 1 in 850 in Ashkenazi Jews",
+    globalCases: "~60,000",
+    mostAffected: "Ashkenazi Jewish population",
+    mostAffectedSub: "Carrier frequency ~1/18 in Ashkenazi Jews",
+    whoCategory: "Rare metabolic / lysosomal storage disease",
+    orphanet: "ORPHA:355",
+    omim: "MIM: 230800",
+    actionabilityLevel: "High",
+    evidenceStrength: "high",
+    phenotypes: ["Hepatosplenomegaly","Thrombocytopenia","Anemia","Bone pain/crises","Pathological fractures","Avascular necrosis","Parkinsonism risk (GBA-PD)"],
+    genoPhenoNotes: "N370S/N370S homozygotes are almost exclusively Type I (non-neuronopathic). L444P/L444P is associated with Types II/III (neuronopathic). Compound heterozygotes N370S/L444P usually present as Type I but with more severe bone disease. GBA heterozygosity is a major risk factor for Parkinson disease (~5-fold increased risk).",
+    clinActionSummary: "Enzyme replacement therapy (ERT) with imiglucerase, velaglucerase alfa, or taliglucerase alfa is highly effective for Type I and systemic manifestations in Type III. Substrate reduction therapy (eliglustat, miglustat) available for Type I. Lifelong monitoring required.",
+    enrichmentNotes: "Ashkenazi Jewish carrier frequency ~1/18; general population ~1/100. Frequency elevated in Norrbottnian Swedes (Type III). Nile Valley region also shows elevated prevalence.",
+    mapData: [
+      { lat:31.5, lng:34.8, region:"Israel / Ashkenazi diaspora", prevalence:"1/850 (Type I)", cases:"~10,000", note:"Highest known prevalence; carrier freq 1/18" },
+      { lat:40, lng:-74, region:"North America (Ashkenazi)", prevalence:"1/10,000", cases:"~15,000", note:"Well-characterized; ERT widely available" },
+      { lat:54, lng:15, region:"Europe", prevalence:"1/40,000–1/100,000", cases:"~15,000", note:"Norrbottnian Sweden enriched for Type III" },
+      { lat:20, lng:80, region:"South Asia", prevalence:"1/60,000", cases:"~8,000", note:"Underdiagnosed; limited ERT access" },
+      { lat:-25, lng:-50, region:"Latin America", prevalence:"1/50,000", cases:"~5,000", note:"Brazil, Argentina have specialized centers" },
+      { lat:27, lng:30, region:"North Africa / Nile Valley", prevalence:"1/30,000", cases:"~5,000", note:"Elevated in certain Egyptian communities" },
+    ],
+    alleleFreqs: [
+      { gene:"GBA1", variant:"p.Asn409Ser (N370S)", pop:"Ashkenazi Jewish", af:"0.030", carrier:"~1/18", path:"Pathogenic", evidence:"High" },
+      { gene:"GBA1", variant:"p.Asn409Ser (N370S)", pop:"European (non-Finnish)", af:"0.0009", carrier:"~1/540", path:"Pathogenic", evidence:"High" },
+      { gene:"GBA1", variant:"p.Leu483Pro (L444P)", pop:"Ashkenazi Jewish", af:"0.012", carrier:"~1/40", path:"Pathogenic", evidence:"High" },
+      { gene:"GBA1", variant:"p.Leu483Pro (L444P)", pop:"South Asian", af:"0.0003", carrier:"~1/1,600", path:"Pathogenic", evidence:"Moderate" },
+      { gene:"GBA1", variant:"p.Asp448His (D409H)", pop:"Nile Valley (Egyptian)", af:"0.002", carrier:"~1/250", path:"Pathogenic", evidence:"Moderate" },
+    ],
+    chartPops: ["Ashkenazi Jewish","European","Nile Valley","South Asian","East Asian"],
+    chartAFs: [0.030, 0.0009, 0.002, 0.0003, 0.00008],
+    actionable: [
+      {
+        gene:"GBA1", variant:"p.Asn409Ser (N370S) and other pathogenic variants",
+        significance:"Pathogenic", evidenceLevel:"High", actionability:"High",
+        badges:["ACMG Actionable","ClinGen Curated","High Evidence","Treatment Available","Screening Available"],
+        screening:"CBC, liver/spleen imaging, bone marrow assessment, chitotriosidase activity; Parkinson disease surveillance in heterozygotes",
+        prevention:"Newborn screening programs in high-prevalence populations; carrier screening in Ashkenazi Jewish community",
+        treatment:"ERT: imiglucerase (Cerezyme), velaglucerase alfa (VPRIV), taliglucerase alfa (Elelyso); SRT: eliglustat (Cerdelga) for Type I CYP2D6 extensive/intermediate metabolizers; miglustat (Zavesca)",
+        drugAvoidance:"N/A",
+        pharmacogenomics:"Eliglustat dosing requires CYP2D6 genotyping — contraindicated in ultra-rapid metabolizers",
+        guideline:"ERT consensus guidelines (Pastores et al. 2004, updated 2022); CPIC: CYP2D6/eliglustat"
+      }
+    ]
+  },
+
+  bloom: {
+    name: "Bloom Syndrome",
+    desc: "An extremely rare autosomal recessive disorder caused by biallelic loss-of-function variants in BLM (encoding RecQ helicase), resulting in genomic instability, high sister-chromatid exchange rates, short stature, sun-sensitive skin, immunodeficiency, and markedly elevated pan-cancer risk.",
+    inheritance: "Autosomal recessive",
+    genes: ["BLM"],
+    keyVariants: ["BLM c.2207_2212delinsTAGATTC (blmAsh; founder variant in Ashkenazi Jews)"],
+    prevalence: "Extremely rare; ~1/48,000 in Ashkenazi Jews (carrier); <400 cases described worldwide",
+    globalCases: "<400 total cases reported",
+    mostAffected: "Ashkenazi Jewish population",
+    mostAffectedSub: "Carrier frequency ~1/110 in Ashkenazi Jews",
+    whoCategory: "Ultra-rare DNA repair disorder / chromosomal instability syndrome",
+    orphanet: "ORPHA:125",
+    omim: "MIM: 210900",
+    actionabilityLevel: "Moderate",
+    evidenceStrength: "moderate",
+    phenotypes: ["Short stature (prenatal onset)","Butterfly facial erythema (photosensitivity)","Hypo/hyperpigmented skin","Recurrent infections (immunodeficiency)","Diabetes mellitus","Elevated cancer risk (pan-cancer)","Infertility in males","Learning disabilities"],
+    genoPhenoNotes: "BLM frameshift variants cause complete loss of helicase function and are associated with the most severe phenotypes. The Ashkenazi founder variant (blmAsh) is the most common allele. Compound heterozygotes exist. Cancer risks are dramatically elevated — lifetime risk approaches 50%+, with cancers occurring at younger ages.",
+    clinActionSummary: "No curative treatment. Management focuses on cancer surveillance (annual colonoscopy, skin exams, regular cancer screening from early age), sun avoidance, infection management, and diabetes monitoring. Clinical registries (Bloom's Syndrome Registry) guide management.",
+    enrichmentNotes: "The blmAsh founder variant is exclusively enriched in the Ashkenazi Jewish population (carrier ~1/110). Other BLM variants occur sporadically across populations but are extremely rare. Founder effects documented in Middle Eastern Jewish groups.",
+    mapData: [
+      { lat:31.5, lng:34.8, region:"Israel / Ashkenazi diaspora", prevalence:"~1/48,000 (affected)", cases:"~50 known", note:"Highest frequency; carrier ~1/110" },
+      { lat:40, lng:-74, region:"North America (Ashkenazi)", prevalence:"~1/48,000", cases:"~100 known", note:"Most cases managed at specialized centers" },
+      { lat:54, lng:18, region:"Europe", prevalence:"Extremely rare (<1/1,000,000)", cases:"~50 known", note:"Sporadic BLM variants; not founder" },
+      { lat:20, lng:80, region:"South Asia", prevalence:"Extremely rare", cases:"<20 known", note:"Sporatic cases reported" },
+      { lat:35, lng:105, region:"East Asia", prevalence:"Extremely rare", cases:"<20 known", note:"No founder effect" },
+    ],
+    alleleFreqs: [
+      { gene:"BLM", variant:"blmAsh (c.2207_2212delinsTAGATTC)", pop:"Ashkenazi Jewish", af:"0.0090", carrier:"~1/110", path:"Pathogenic", evidence:"High" },
+      { gene:"BLM", variant:"blmAsh", pop:"European (non-Finnish)", af:"0.0000010", carrier:"~1/1,000,000", path:"Pathogenic", evidence:"High" },
+      { gene:"BLM", variant:"Various LOF", pop:"South Asian", af:"0.000002", carrier:"~1/500,000", path:"Pathogenic", evidence:"Low" },
+      { gene:"BLM", variant:"Various LOF", pop:"African/African American", af:"0.0000015", carrier:"~1/700,000", path:"Pathogenic", evidence:"Low" },
+    ],
+    chartPops: ["Ashkenazi Jewish","European","South Asian","East Asian","African"],
+    chartAFs: [0.0090, 0.0000010, 0.000002, 0.0000012, 0.0000015],
+    actionable: [
+      {
+        gene:"BLM", variant:"Biallelic pathogenic BLM variants",
+        significance:"Pathogenic", evidenceLevel:"Moderate", actionability:"Moderate",
+        badges:["ClinGen Curated","Moderate Evidence","Screening Available"],
+        screening:"Annual full-body skin exam; colonoscopy from age 12–15; annual CBC; breast/GYN surveillance; diabetes screening; hematologic malignancy surveillance; Bloom's Syndrome Registry enrollment",
+        prevention:"Strict sun protection; avoid ionizing radiation (↑ chromosomal breakage); avoid alkylating chemotherapy if possible",
+        treatment:"No disease-modifying therapy. Supportive: growth hormone considered for short stature; immunoglobulin replacement for immunodeficiency; standard cancer treatment when needed",
+        drugAvoidance:"Ionizing radiation and radiomimetic drugs (extremely high chromosomal breakage risk); alkylating agents when alternatives exist",
+        pharmacogenomics:"N/A",
+        guideline:"Bloom Syndrome Registry guidelines; GeneReviews: BLM-Related Bloom Syndrome"
+      }
+    ]
+  },
+
+  fh: {
+    name: "Familial Hypercholesterolemia",
+    desc: "One of the most common monogenic disorders, caused by pathogenic variants in LDLR, APOB, or PCSK9, leading to severely elevated LDL-C and early-onset atherosclerotic cardiovascular disease. Heterozygous FH affects ~1 in 250 worldwide and remains drastically underdiagnosed.",
+    inheritance: "Autosomal dominant (most common); rare autosomal recessive (LDLRAP1)",
+    genes: ["LDLR","APOB","PCSK9","LDLRAP1"],
+    keyVariants: ["LDLR c.1285G>A (Lebanese founder)", "LDLR exon 1-8 deletion (Finnish)", "APOB c.10580G>A (p.Arg3527Gln)"],
+    prevalence: "~1 in 250 (heterozygous); 1 in 250,000–500,000 (homozygous)",
+    globalCases: "~30 million (heterozygous FH) — largely undiagnosed",
+    mostAffected: "Lebanese, Afrikaners (South African), French Canadians — founder effect populations",
+    mostAffectedSub: "HoFH: 1/50,000–1/250,000 in SA Afrikaners",
+    whoCategory: "Common monogenic cardiovascular/metabolic disorder",
+    orphanet: "ORPHA:2495",
+    omim: "MIM: 143890",
+    actionabilityLevel: "High",
+    evidenceStrength: "high",
+    phenotypes: ["Severely elevated LDL-C (>190 mg/dL in adults)","Tendon xanthomas","Corneal arcus before age 45","Premature coronary artery disease","Xanthelasma","Early MI (<55 men, <60 women)"],
+    genoPhenoNotes: "LDLR null/null (HoFH) variants cause most severe disease with LDL-C often >500 mg/dL and MI before age 20. Defective LDLR alleles cause moderate HoFH. APOB p.Arg3527Gln is associated with slightly milder LDL elevation. PCSK9 gain-of-function variants cause intermediate severity. Dominant-negative effect is key mechanism in HetFH.",
+    clinActionSummary: "High-intensity statin therapy is first line; add ezetimibe; PCSK9 inhibitors (evolocumab, alirocumab) for inadequate response. LDL apheresis for HoFH. lomitapide and evinacumab for HoFH. Target LDL-C <70 mg/dL in very high-risk patients.",
+    enrichmentNotes: "Afrikaners (South Africa): 1/70–1/100 HetFH due to founder effect. Lebanese population: ~1/85 due to multiple founder variants. French Canadians: 1/270. Ashkenazi Jewish: ~1/67. Finnish: distinct founder deletion. Global burden ~30M largely undiagnosed.",
+    mapData: [
+      { lat:-26, lng:28, region:"South Africa (Afrikaner)", prevalence:"1/70–1/100", cases:"~400,000", note:"Highest known HetFH prevalence; founder effect" },
+      { lat:33.8, lng:35.5, region:"Lebanon / Middle East", prevalence:"1/85", cases:"~150,000", note:"Multiple LDLR founder variants" },
+      { lat:45, lng:-73, region:"French Canada", prevalence:"1/270", cases:"~150,000", note:"Distinct founder LDLR variants" },
+      { lat:40, lng:-100, region:"United States", prevalence:"1/250", cases:"~1,300,000", note:"~90% undiagnosed; PCSK9i access varies" },
+      { lat:54, lng:15, region:"Europe", prevalence:"1/200–1/500", cases:"~2,000,000", note:"CASCADE FH registries; cascade screening" },
+      { lat:20, lng:80, region:"South Asia", prevalence:"1/250–1/500", cases:"~2,000,000", note:"Largely undiagnosed; high CVD burden" },
+      { lat:35, lng:105, region:"China", prevalence:"1/250", cases:"~5,600,000", note:"Largest absolute burden; emerging registries" },
+    ],
+    alleleFreqs: [
+      { gene:"LDLR", variant:"Various pathogenic (>3,000 known)", pop:"Afrikaner (South Africa)", af:"0.005–0.007", carrier:"~1/70", path:"Pathogenic", evidence:"High" },
+      { gene:"LDLR", variant:"Founder variants", pop:"Lebanese", af:"0.006", carrier:"~1/85", path:"Pathogenic", evidence:"High" },
+      { gene:"LDLR", variant:"Exon 1-8 deletion", pop:"Finnish", af:"0.001", carrier:"~1/500", path:"Pathogenic", evidence:"High" },
+      { gene:"APOB", variant:"p.Arg3527Gln", pop:"European", af:"0.0016", carrier:"~1/300", path:"Pathogenic", evidence:"High" },
+      { gene:"PCSK9", variant:"p.Asp374Tyr (GOF)", pop:"West African", af:"0.0030", carrier:"~1/160", path:"Pathogenic", evidence:"High" },
+    ],
+    chartPops: ["Afrikaner","Lebanese","Finnish","European","West African"],
+    chartAFs: [0.006, 0.006, 0.001, 0.0016, 0.0030],
+    actionable: [
+      {
+        gene:"LDLR / APOB / PCSK9", variant:"Pathogenic variants causing HetFH / HoFH",
+        significance:"Pathogenic", evidenceLevel:"High", actionability:"High",
+        badges:["ACMG Actionable","ClinGen Curated","High Evidence","Treatment Available","Screening Available","CPIC Guideline"],
+        screening:"Fasting lipid panel; LDL-C cascade screening in 1st-degree relatives; carotid IMT / coronary CT calcium score; annual lipid monitoring on therapy",
+        prevention:"Aggressive lipid-lowering from diagnosis; dietary LDL reduction; lifestyle modification; cascade family testing",
+        treatment:"High-intensity statins (rosuvastatin 40mg, atorvastatin 80mg); ezetimibe; PCSK9 inhibitors (evolocumab/alirocumab); HoFH: lomitapide, evinacumab, LDL apheresis; inclisiran (siRNA)",
+        drugAvoidance:"Gemfibrozil + statin combination (↑ myopathy); avoid strong CYP3A4 inhibitors with simvastatin",
+        pharmacogenomics:"SLCO1B1 genotype predicts statin-induced myopathy risk (CPIC guidelines); CYP2C9 relevant for fluvastatin",
+        guideline:"EAS/ESC 2019 FH Guidelines; ACC/AHA 2018 Cholesterol Guidelines; CPIC SLCO1B1/Statins"
+      }
+    ]
+  },
+
+  sickle: {
+    name: "Sickle Cell Disease",
+    desc: "A hemoglobin disorder caused by the HbS variant (HBB c.20A>T; p.Glu7Val), leading to polymerization of deoxygenated hemoglobin, sickling of erythrocytes, vaso-occlusion, hemolytic anemia, and multi-organ complications. The most common severe monogenic disease globally.",
+    inheritance: "Autosomal recessive (HbSS most severe); compound heterozygous variants (HbSC, HbS/β-thal)",
+    genes: ["HBB"],
+    keyVariants: ["HBB c.20A>T (p.Glu7Val / HbS)", "HBB c.19G>A (HbC)", "HBB IVS1-110 (β+-thalassemia splice variant)"],
+    prevalence: "~7.7 million affected globally; carrier frequency up to 1/4 in equatorial Africa",
+    globalCases: "~7,700,000",
+    mostAffected: "Sub-Saharan Africa (>75% of births)",
+    mostAffectedSub: "Up to 2% of births have SCD in high-burden African countries",
+    whoCategory: "Hemoglobin disorder / globally significant rare disease",
+    orphanet: "ORPHA:232",
+    omim: "MIM: 603903",
+    actionabilityLevel: "High",
+    evidenceStrength: "high",
+    phenotypes: ["Vaso-occlusive pain crises","Acute chest syndrome","Stroke (ischemic)","Splenic sequestration","Dactylitis (infants)","Chronic hemolytic anemia","Priapism","Chronic kidney disease","Avascular necrosis","Pulmonary hypertension"],
+    genoPhenoNotes: "HbSS (homozygous) is most severe. HbSC and HbS/β⁰-thalassemia are intermediate in severity. Co-inheritance of α-thalassemia ameliorates disease. High HbF levels (modulated by BCL11A, HBS1L-MYB loci) are the primary genetic modifier, reducing vaso-occlusion and mortality. G6PD variants modify oxidative stress and anemia severity.",
+    clinActionSummary: "Hydroxyurea (HU) to elevate HbF; penicillin prophylaxis and vaccinations; transcranial Doppler screening for stroke; chronic transfusion therapy; L-glutamine; voxelotor; crizanlizumab. Curative: allogeneic HSCT; gene therapy (lovotibeglogene autotemcel / betibeglogene spartacus) now approved.",
+    enrichmentNotes: "HbS allele frequency up to 10–20% in equatorial Africa (malaria belt). Highest birth prevalence in Nigeria, DRC, India. African diaspora in Americas/Europe. Indian subcontinent has second-highest global burden. Carrier frequency in Greece, Saudi Arabia, and Middle East also elevated.",
+    mapData: [
+      { lat:8, lng:2, region:"West Africa (Nigeria, Ghana)", prevalence:"HbS carrier: 15–25%", cases:"~1,800,000 births/year", note:"Highest global burden; newborn screening expanding" },
+      { lat:-5, lng:22, region:"Central Africa (DRC)", prevalence:"HbS carrier: 20–25%", cases:"~800,000 births/year", note:"Very high burden; limited treatment access" },
+      { lat:5, lng:37, region:"East Africa (Ethiopia, Kenya)", prevalence:"HbS carrier: 5–15%", cases:"~600,000 births/year", note:"Emerging newborn screening programs" },
+      { lat:20, lng:80, region:"India", prevalence:"HbS carrier: 1–4% (certain communities)", cases:"~200,000 births/year", note:"2nd largest global burden; tribal communities highly affected" },
+      { lat:40, lng:-95, region:"United States", prevalence:"SCD: 1/400 African Americans; carrier 1/12", cases:"~100,000 affected", note:"Newborn screening universal; hydroxyurea widely used" },
+      { lat:10, lng:45, region:"Middle East & Arabian Peninsula", prevalence:"HbS carrier: 2–5%", cases:"~80,000 affected", note:"Elevated in Saudi Arabia; increasing gene therapy access" },
+      { lat:37, lng:22, region:"Mediterranean (Greece, Turkey)", prevalence:"HbS + HbC carrier: 1–3%", cases:"~50,000 affected", note:"Thalassemia belt overlap" },
+    ],
+    alleleFreqs: [
+      { gene:"HBB", variant:"p.Glu7Val (HbS)", pop:"West African", af:"0.12–0.20", carrier:"1/3 to 1/5", path:"Pathogenic (bi-allelic)", evidence:"High" },
+      { gene:"HBB", variant:"p.Glu7Val (HbS)", pop:"African/African American", af:"0.057", carrier:"~1/9", path:"Pathogenic (bi-allelic)", evidence:"High" },
+      { gene:"HBB", variant:"p.Glu7Val (HbS)", pop:"South Asian (tribal)", af:"0.01–0.04", carrier:"~1/12–1/50", path:"Pathogenic", evidence:"High" },
+      { gene:"HBB", variant:"p.Glu7Val (HbS)", pop:"Arabian Peninsula", af:"0.03–0.05", carrier:"~1/10–1/17", path:"Pathogenic", evidence:"High" },
+      { gene:"HBB", variant:"p.Glu7Val (HbS)", pop:"European (non-Finnish)", af:"0.0006", carrier:"~1/800", path:"Pathogenic", evidence:"High" },
+    ],
+    chartPops: ["West African","African American","South Asian","Arabian","European"],
+    chartAFs: [0.15, 0.057, 0.025, 0.04, 0.0006],
+    actionable: [
+      {
+        gene:"HBB", variant:"p.Glu7Val (HbS) — HbSS and compound heterozygous",
+        significance:"Pathogenic", evidenceLevel:"High", actionability:"High",
+        badges:["ACMG Actionable","ClinGen Curated","High Evidence","Treatment Available","Screening Available","CPIC Guideline"],
+        screening:"Newborn hemoglobin electrophoresis/HPLC; transcranial Doppler (TCD) annually 2–16 years; renal function; ophthalmology; stroke MRI when TCD elevated; G6PD testing",
+        prevention:"Penicillin prophylaxis (birth–5 years); vaccinations (Pneumococcus, Meningococcus, Haemophilus); folic acid; hydroxyurea to reduce HbF-related crises; avoid altitude/dehydration",
+        treatment:"Hydroxyurea (HbF induction); L-glutamine; voxelotor (Oxbryta – HbS polymerization inhibitor); crizanlizumab (P-selectin blocker); chronic transfusion for high-TCD; HSCT (curative); Gene therapy: lovotibeglogene autotemcel (Lyfgenia), betibeglogene spartacus (Zynteglo) — FDA approved 2023",
+        drugAvoidance:"NSAIDs with caution (renal risk); avoid dehydrating medications; rasburicase contraindicated if G6PD deficient",
+        pharmacogenomics:"G6PD status guides rasburicase and primaquine use; HbF-modifying SNPs (BCL11A, HBS1L-MYB) used for hydroxyurea response prediction in research",
+        guideline:"NHLBI Sickle Cell Evidence-Based Guidelines; CPIC G6PD; ASH 2020 SCD Guidelines"
+      }
+    ]
+  },
+
+  cf: {
+    name: "Cystic Fibrosis",
+    desc: "A multisystem disorder caused by pathogenic variants in CFTR, disrupting chloride ion transport and leading to thick mucus secretions, progressive obstructive lung disease, pancreatic insufficiency, and male infertility. Now partially treatable with CFTR modulators.",
+    inheritance: "Autosomal recessive",
+    genes: ["CFTR"],
+    keyVariants: ["CFTR c.1521_1523delCTT (p.Phe508del / F508del — ~70% of alleles)", "CFTR c.3120+1G>A (G1244E)", "CFTR p.Gly551Asp (G551D)"],
+    prevalence: "1 in 2,000–3,500 (European ancestry); ~70,000 worldwide",
+    globalCases: "~70,000",
+    mostAffected: "Northern European (especially Irish, Scottish)",
+    mostAffectedSub: "Carrier frequency ~1/25 in European ancestry",
+    whoCategory: "Rare genetic disease / chronic respiratory disease",
+    orphanet: "ORPHA:586",
+    omim: "MIM: 219700",
+    actionabilityLevel: "High",
+    evidenceStrength: "high",
+    phenotypes: ["Chronic progressive lung disease","Bronchiectasis","Recurrent pulmonary infections (PA, MRSA)","Pancreatic insufficiency (85%)","CF-related diabetes","Meconium ileus (neonates)","Male infertility (CBAVD)","Sinusitis","Liver disease"],
+    genoPhenoNotes: "F508del/F508del homozygotes typically have pancreatic insufficiency and moderate-severe lung disease. F508del/G551D or F508del/R117H may have milder phenotypes. CFTR variants classified into functional classes (I–VI): Class I/II (null/folding defects) have most severe disease; Class III (gating) are highly treatable with ivacaftor. Residual CFTR function correlates with pancreatic sufficiency.",
+    clinActionSummary: "CFTR modulator therapy is transformative: elexacaftor/tezacaftor/ivacaftor (ETI / Trikafta) benefits ~90% of patients with at least one F508del allele. Ivacaftor (alone) for Class III gating variants. Airway clearance; antibiotics; pancreatic enzymes; nutritional support; lung transplant for end-stage disease.",
+    enrichmentNotes: "Highest prevalence in Irish/Scottish (~1/1,800). Dutch, German, British: ~1/2,500. Lower in Southern Europeans, South Asians, East Asians, and Africans. F508del is the pan-ethnic most common variant (~70% global alleles) but hundreds of rare variants exist across populations.",
+    mapData: [
+      { lat:53, lng:-8, region:"Ireland", prevalence:"1/1,400–1/1,800", cases:"~1,400", note:"Highest European prevalence; ETI access" },
+      { lat:51, lng:-1, region:"United Kingdom", prevalence:"1/2,500", cases:"~10,500", note:"CFTR registry; Trikafta approved NHS" },
+      { lat:49, lng:10, region:"Germany / Central Europe", prevalence:"1/3,000", cases:"~8,000", note:"Well-established CF centers" },
+      { lat:40, lng:-100, region:"United States", prevalence:"1/3,500", cases:"~30,000", note:"Trikafta widely used; survival >50 years" },
+      { lat:20, lng:80, region:"South Asia (India)", prevalence:"1/10,000–1/40,000", cases:"~25,000", note:"Different variant spectrum; limited modulator access" },
+      { lat:-25, lng:-50, region:"Latin America", prevalence:"1/5,000–1/8,000", cases:"~8,000", note:"Mixed variant distribution; access gap" },
+      { lat:35, lng:105, region:"East Asia (China)", prevalence:"1/10,000–1/100,000", cases:"~10,000", note:"Different CF variants; F508del rare" },
+    ],
+    alleleFreqs: [
+      { gene:"CFTR", variant:"p.Phe508del (F508del)", pop:"European", af:"0.020", carrier:"~1/25", path:"Pathogenic", evidence:"High" },
+      { gene:"CFTR", variant:"p.Phe508del (F508del)", pop:"African/African American", af:"0.003", carrier:"~1/160", path:"Pathogenic", evidence:"High" },
+      { gene:"CFTR", variant:"p.Gly551Asp (G551D)", pop:"European (Irish enrichment)", af:"0.0013", carrier:"~1/380", path:"Pathogenic", evidence:"High" },
+      { gene:"CFTR", variant:"p.Arg117His (R117H)", pop:"European", af:"0.0014", carrier:"~1/360", path:"Pathogenic (context-dependent)", evidence:"High" },
+      { gene:"CFTR", variant:"3120+1G>A", pop:"African/African American", af:"0.0009", carrier:"~1/550", path:"Pathogenic", evidence:"Moderate" },
+    ],
+    chartPops: ["European","African American","South Asian","East Asian","Latino"],
+    chartAFs: [0.020, 0.003, 0.0008, 0.0002, 0.005],
+    actionable: [
+      {
+        gene:"CFTR", variant:"p.Phe508del, p.Gly551Asp, and 180+ other eligible variants",
+        significance:"Pathogenic", evidenceLevel:"High", actionability:"High",
+        badges:["ACMG Actionable","ClinGen Curated","High Evidence","Treatment Available","Screening Available","CPIC Guideline"],
+        screening:"Newborn screening (IRT/DNA/sweat chloride); sweat chloride testing; full CFTR genotyping; annual PFTs, sputum cultures, HbA1c, abdominal imaging",
+        prevention:"Airway clearance therapy; prophylactic antibiotics; CFTR modulator therapy to prevent progression; newborn screening for early intervention",
+        treatment:"CFTR modulators by genotype: ETI (elexacaftor/tezacaftor/ivacaftor; Trikafta) for F508del ≥1 allele (age ≥2); ivacaftor (Kalydeco) for Class III gating variants; lumacaftor/ivacaftor (Orkambi) F508del/F508del fallback; airway clearance; pancreatic enzymes; lung transplant for advanced disease",
+        drugAvoidance:"Strong CYP3A4 inhibitors significantly increase ETI exposure (dose adjust); azithromycin interacts with ivacaftor",
+        pharmacogenomics:"CFTR variant class determines modulator eligibility — genotyping is mandatory before prescribing; CYP3A4/5 metabolizes ivacaftor",
+        guideline:"CFF Clinical Care Guidelines; EMA/FDA ETI labeling by CFTR genotype; CPIC (in development)"
+      }
+    ]
+  },
+
+  hboc: {
+    name: "Hereditary Breast & Ovarian Cancer Syndrome",
+    desc: "Caused primarily by pathogenic germline variants in BRCA1 or BRCA2, conferring substantially elevated lifetime risks for breast, ovarian, prostate, and pancreatic cancers. Among the most clinically actionable hereditary cancer syndromes with robust surveillance and risk-reduction strategies.",
+    inheritance: "Autosomal dominant",
+    genes: ["BRCA1","BRCA2","PALB2","RAD51C","RAD51D","BRIP1"],
+    keyVariants: ["BRCA1 c.5266dupC (5382insC; Ashkenazi Jewish founder)", "BRCA2 c.5946delT (6174delT; Ashkenazi Jewish founder)", "BRCA1 185delAG (Ashkenazi founder)"],
+    prevalence: "BRCA1/2 combined: ~1 in 400 general population; ~1 in 40 Ashkenazi Jews",
+    globalCases: "~1,600,000 carriers globally (BRCA1/2)",
+    mostAffected: "Ashkenazi Jewish (highest carrier frequency); Icelandic (BRCA2 founder); Norwegian; Polish (BRCA1 5382insC)",
+    mostAffectedSub: "3 founder variants account for ~90% of Ashkenazi BRCA carriers",
+    whoCategory: "Hereditary cancer predisposition syndrome",
+    orphanet: "ORPHA:145",
+    omim: "MIM: 113705 (BRCA1), 600185 (BRCA2)",
+    actionabilityLevel: "High",
+    evidenceStrength: "high",
+    phenotypes: ["Breast cancer (female: lifetime risk 50–72% BRCA1; 45–69% BRCA2)","Ovarian cancer (lifetime risk 44% BRCA1; 17–23% BRCA2)","Male breast cancer (BRCA2 ~6%)","Prostate cancer (BRCA2 ~20% by 80)","Pancreatic cancer (elevated, esp. BRCA2)","Triple-negative breast cancer (BRCA1-associated)"],
+    genoPhenoNotes: "BRCA1 pathogenic variants are preferentially associated with high-grade serous ovarian cancer and triple-negative breast cancer. BRCA2 carriers have relatively more ER-positive breast cancer and higher prostate/pancreatic risks. Large rearrangements and splice variants carry similar risks to truncating variants. VUS resolution requires clinical and functional evidence.",
+    clinActionSummary: "Risk-reducing bilateral salpingo-oophorectomy (RRSO) dramatically reduces ovarian cancer mortality; bilateral mastectomy reduces breast cancer risk by ~90%. Enhanced surveillance: annual MRI + mammography. PARP inhibitors (olaparib, niraparib, rucaparib) approved for BRCA-associated cancers. Platinum-based chemotherapy shows enhanced efficacy.",
+    enrichmentNotes: "Ashkenazi Jewish: combined carrier rate ~1/40 (3 founder variants). Icelandic: BRCA2 999del5 carrier ~0.6%. Polish/Eastern European: BRCA1 5382insC. Norwegian: BRCA1 1135insA. These founder effects justify population-level or ethnic-targeted carrier screening.",
+    mapData: [
+      { lat:31.5, lng:34.8, region:"Israel / Ashkenazi diaspora", prevalence:"~1/40 (BRCA1/2 carriers)", cases:"~200,000 carriers", note:"3 founder variants; population screening offered" },
+      { lat:40, lng:-74, region:"North America", prevalence:"~1/400 general; 1/40 Ashkenazi", cases:"~500,000 carriers", note:"BRCA testing widely available; PARP inhibitor access" },
+      { lat:54, lng:15, region:"Europe", prevalence:"~1/400–1/600", cases:"~500,000 carriers", note:"Polish, Norwegian founder enrichment; NICE guidelines" },
+      { lat:64, lng:-19, region:"Iceland", prevalence:"BRCA2 999del5: ~0.6% carrier", cases:"~1,400 carriers", note:"Unique BRCA2 founder variant; population-level data" },
+      { lat:20, lng:80, region:"South Asia", prevalence:"~1/500–1/1,000", cases:"~200,000 carriers", note:"Different variant spectrum; limited germline testing" },
+      { lat:35, lng:105, region:"East Asia", prevalence:"~1/500–1/1,000", cases:"~300,000 carriers", note:"BRCA2 variants more common; founder variants in Japan/China" },
+    ],
+    alleleFreqs: [
+      { gene:"BRCA1", variant:"c.5266dupC (5382insC)", pop:"Ashkenazi Jewish", af:"0.0090", carrier:"~1/110", path:"Pathogenic", evidence:"High" },
+      { gene:"BRCA1", variant:"c.68_69delAG (185delAG)", pop:"Ashkenazi Jewish", af:"0.0065", carrier:"~1/75", path:"Pathogenic", evidence:"High" },
+      { gene:"BRCA2", variant:"c.5946delT (6174delT)", pop:"Ashkenazi Jewish", af:"0.012", carrier:"~1/40", path:"Pathogenic", evidence:"High" },
+      { gene:"BRCA2", variant:"999del5", pop:"Icelandic", af:"0.006", carrier:"~1/83", path:"Pathogenic", evidence:"High" },
+      { gene:"BRCA1", variant:"c.5266dupC", pop:"Eastern European (Polish)", af:"0.003", carrier:"~1/165", path:"Pathogenic", evidence:"High" },
+    ],
+    chartPops: ["Ashkenazi Jewish","Eastern European","Icelandic","East Asian","General Population"],
+    chartAFs: [0.020, 0.003, 0.006, 0.001, 0.0025],
+    actionable: [
+      {
+        gene:"BRCA1 / BRCA2", variant:"Pathogenic / Likely Pathogenic germline variants",
+        significance:"Pathogenic", evidenceLevel:"High", actionability:"High",
+        badges:["ACMG Actionable","ClinGen Curated","High Evidence","Treatment Available","Screening Available"],
+        screening:"Annual breast MRI + mammography from age 25–30; consider RRM; RRSO by 35–40 (BRCA1) or 40–45 (BRCA2); prostate PSA surveillance (BRCA2 males); pancreatic surveillance (BRCA2 with family history); cascade testing of 1st-degree relatives",
+        prevention:"Risk-reducing bilateral mastectomy (reduces breast Ca risk ~90%); RRSO (reduces ovarian Ca risk >95%, breast Ca ~50% if premenopausal); chemoprevention with tamoxifen or raloxifene; discuss with genetic counselor",
+        treatment:"Active cancer: PARP inhibitors — olaparib (Lynparza), niraparib (Zejula), rucaparib (Rubraca) for BRCA1/2-mutated ovarian and breast cancers; platinum-based chemotherapy (enhanced response); talazoparib (Talzenna) for breast cancer; pembrolizumab combinations",
+        drugAvoidance:"N/A (no specific avoidances); note: oral contraceptives may ↑ breast cancer risk but ↓ ovarian cancer risk — individualized decision",
+        pharmacogenomics:"BRCA status is a theragnostic biomarker for PARP inhibitor eligibility — germline and somatic testing both relevant",
+        guideline:"NCCN Genetic/Familial High-Risk Assessment: Breast, Ovarian, Pancreatic; NICE CG164; ESMO Hereditary Cancer Guidelines; ACMG SF v3.2"
+      }
+    ]
+  },
+
+  lynch: {
+    name: "Lynch Syndrome",
+    desc: "The most common hereditary colorectal cancer syndrome, caused by germline pathogenic variants in mismatch repair (MMR) genes MLH1, MSH2, MSH6, or PMS2, or EPCAM deletions. Characterized by deficient MMR (dMMR) and microsatellite instability (MSI-H), conferring elevated risks for colorectal, endometrial, ovarian, gastric, and urothelial cancers.",
+    inheritance: "Autosomal dominant",
+    genes: ["MLH1","MSH2","MSH6","PMS2","EPCAM"],
+    keyVariants: ["MLH1 c.1A>G (founder in Ashkenazi Jews)", "MSH2 exon 1-6 deletion (Muir-Torre variant)", "MLH1 c.676C>T (p.Arg226*; Finish founder)"],
+    prevalence: "~1 in 279–440 (general population); ~1 in 370–500 (US); highly underdiagnosed",
+    globalCases: "~1,000,000 carriers (largely undiagnosed)",
+    mostAffected: "Global — no strong ethnic enrichment; Finnish MLH1 founder",
+    mostAffectedSub: "Finnish population MLH1 founder variant enriched",
+    whoCategory: "Hereditary cancer predisposition syndrome",
+    orphanet: "ORPHA:144",
+    omim: "MIM: 120435 (MLH1)",
+    actionabilityLevel: "High",
+    evidenceStrength: "high",
+    phenotypes: ["Colorectal cancer (lifetime risk 20–80% by gene)","Endometrial cancer (women: 15–60%)","Ovarian cancer (women: 1–24%)","Gastric cancer (elevated esp. MLH1/MSH2)","Urothelial/renal pelvis cancer","Sebaceous skin tumors (Muir-Torre)","CNS tumors (Turcot variant)"],
+    genoPhenoNotes: "MLH1 and MSH2 confer higher CRC and endometrial risks than MSH6 or PMS2. PMS2 biallelic variants cause Constitutional Mismatch Repair Deficiency (CMMRD) — childhood-onset brain/hematologic cancers. MSH2 EPCAM deletion causes Lynch via MSH2 epigenetic silencing. All Lynch tumors show MSI-H/dMMR — critical for immunotherapy eligibility.",
+    clinActionSummary: "Colonoscopy every 1–2 years from age 20–25; aspirin (600 mg/day) shown to reduce CRC incidence. Endometrial surveillance or prophylactic hysterectomy. MSI-H/dMMR tumors respond exceptionally well to PD-1 inhibitors (pembrolizumab, dostarlimab) — approved for Lynch-associated MSI-H cancers.",
+    enrichmentNotes: "No major ethnic enrichment. Finnish MLH1 founder allele. Estimated ~1 million Lynch carriers in the US — >95% undiagnosed. Universal tumor testing (MMR IHC/MSI) recommended for all CRC/endometrial cancers.",
+    mapData: [
+      { lat:60, lng:25, region:"Finland", prevalence:"MLH1 founder: ~1/4,000", cases:"~1,400 MLH1 carriers", note:"MLH1 p.Arg226* founder variant; national registry" },
+      { lat:40, lng:-100, region:"United States", prevalence:"~1/280–1/440", cases:"~800,000 carriers", note:">95% undiagnosed; universal tumor testing campaign" },
+      { lat:54, lng:15, region:"Europe", prevalence:"~1/300–1/500", cases:"~700,000 carriers", note:"INSIGHT consortium data; universal MMR IHC guidelines" },
+      { lat:20, lng:80, region:"South Asia", prevalence:"~1/500–1/1,000", cases:"~300,000 carriers", note:"Underdiagnosed; limited genetic testing infrastructure" },
+      { lat:35, lng:105, region:"East Asia", prevalence:"~1/400–1/600", cases:"~350,000 carriers", note:"Different variant spectrum; gastric cancer risk elevated" },
+      { lat:-25, lng:-50, region:"Latin America", prevalence:"~1/500", cases:"~120,000 carriers", note:"HDGC-Lynch overlap studied in Brazil" },
+    ],
+    alleleFreqs: [
+      { gene:"MLH1", variant:"p.Arg226* (Finnish founder)", pop:"Finnish", af:"0.00025", carrier:"~1/4,000", path:"Pathogenic", evidence:"High" },
+      { gene:"MLH1", variant:"Various pathogenic", pop:"European", af:"0.0008", carrier:"~1/600", path:"Pathogenic", evidence:"High" },
+      { gene:"MSH2", variant:"Various pathogenic", pop:"European", af:"0.0006", carrier:"~1/800", path:"Pathogenic", evidence:"High" },
+      { gene:"MSH6", variant:"Various pathogenic", pop:"General population", af:"0.0005", carrier:"~1/1,000", path:"Pathogenic", evidence:"High" },
+      { gene:"PMS2", variant:"Various pathogenic", pop:"General population", af:"0.0011", carrier:"~1/450", path:"Pathogenic", evidence:"High" },
+    ],
+    chartPops: ["Finnish (MLH1)","European MLH1","European MSH2","Global MSH6","Global PMS2"],
+    chartAFs: [0.00025, 0.0008, 0.0006, 0.0005, 0.0011],
+    actionable: [
+      {
+        gene:"MLH1 / MSH2 / MSH6 / PMS2", variant:"Pathogenic germline MMR variants",
+        significance:"Pathogenic", evidenceLevel:"High", actionability:"High",
+        badges:["ACMG Actionable","ClinGen Curated","High Evidence","Treatment Available","Screening Available"],
+        screening:"Colonoscopy every 1–2 years from age 20–25 (MLH1/MSH2) or 25–30 (MSH6/PMS2); endometrial sampling/TVU annually (women 30–35+); consider upper endoscopy (MLH1/MSH2, gastric risk); urinalysis; cascade germline testing; universal MSI/MMR-IHC on all CRC/endometrial tumors",
+        prevention:"Aspirin 600 mg/day (Lynch trial evidence for CRC prevention); prophylactic hysterectomy + BSO after childbearing (women); smoking cessation",
+        treatment:"MSI-H / dMMR tumors: pembrolizumab (Keytruda) — FDA-approved pan-tumor MSI-H, 1st-line CRC MSI-H; dostarlimab (Jemperli) for endometrial; FOLFOX-based chemotherapy for proficient MMR tumors; HIPEC in ovarian Lynch",
+        drugAvoidance:"N/A",
+        pharmacogenomics:"dMMR/MSI-H status predicts immunotherapy response (theragnostic biomarker); DPYD variants for 5-FU toxicity screening",
+        guideline:"NCCN Lynch Syndrome v2.2024; ACMG SF v3.2; ESMO Lynch Guidelines; ASCO Universal Tumor Testing Statement"
+      }
+    ]
+  },
+
+  wilson: {
+    name: "Wilson Disease",
+    desc: "An autosomal recessive disorder of copper metabolism caused by pathogenic variants in ATP7B, encoding a copper-transporting ATPase. Results in copper accumulation in the liver, brain, cornea, and other organs. Highly treatable if diagnosed early.",
+    inheritance: "Autosomal recessive",
+    genes: ["ATP7B"],
+    keyVariants: ["ATP7B c.3207C>A (p.His1069Gln; Eastern European founder — ~40% of European alleles)", "ATP7B c.2304dupC (Chinese founder)", "ATP7B p.Arg778Leu (Pan-Asian)"],
+    prevalence: "1 in 30,000 (clinical); gene frequency ~1/100 (carrier ~1/90)",
+    globalCases: "~200,000",
+    mostAffected: "Eastern European (Slavic populations)",
+    mostAffectedSub: "p.His1069Gln accounts for ~40% of European pathogenic alleles",
+    whoCategory: "Rare metabolic / copper storage disease",
+    orphanet: "ORPHA:905",
+    omim: "MIM: 277900",
+    actionabilityLevel: "High",
+    evidenceStrength: "high",
+    phenotypes: ["Hepatic disease (acute liver failure, cirrhosis, hepatitis)","Neuropsychiatric symptoms (tremor, dysarthria, psychosis)","Kayser-Fleischer rings (corneal copper)","Hemolytic anemia","Renal tubular acidosis","Osteoporosis","Sunflower cataracts"],
+    genoPhenoNotes: "Hepatic presentations predominate in children (mean age 6–12). Neuropsychiatric presentations typically in teens/young adults. p.His1069Gln/p.His1069Gln homozygotes often present with neurological disease in Eastern Europeans. p.Arg778Leu (pan-Asian) more often associated with hepatic disease. Compound heterozygotes have variable presentations. ATP7B variant severity correlates imperfectly with clinical severity.",
+    clinActionSummary: "Highly treatable: D-penicillamine (chelation); trientine (chelation, fewer side effects); zinc (maintenance therapy — blocks intestinal copper absorption); tetrathiomolybdate (in trials). Liver transplant for acute liver failure or decompensated cirrhosis. Early treatment can reverse most manifestations.",
+    enrichmentNotes: "p.His1069Gln elevated in Eastern European Slavic populations (~40% of pathogenic alleles in Poland, Czech Republic, Slovakia). p.Arg778Leu most common in East and Southeast Asia (~30% of Asian alleles). Overall prevalence ~1/30,000 globally without major outliers.",
+    mapData: [
+      { lat:52, lng:20, region:"Eastern Europe (Poland, Czech Republic)", prevalence:"1/20,000–1/30,000 (enriched)", cases:"~10,000", note:"His1069Gln founder variant ~40% of alleles" },
+      { lat:54, lng:15, region:"Western Europe", prevalence:"1/30,000", cases:"~20,000", note:"Well-established treatment centers" },
+      { lat:40, lng:-100, region:"United States", prevalence:"1/30,000", cases:"~10,000", note:"Multi-ethnic; trientine preferred over D-penicillamine" },
+      { lat:35, lng:105, region:"China", prevalence:"1/25,000–1/35,000", cases:"~40,000", note:"Arg778Leu most common variant; large case series" },
+      { lat:20, lng:80, region:"South / Southeast Asia", prevalence:"1/25,000", cases:"~50,000", note:"Arg778Leu and other pan-Asian variants; largest burden" },
+      { lat:10, lng:37, region:"Middle East / Mediterranean", prevalence:"1/30,000–1/50,000", cases:"~8,000", note:"Consanguinity increases prevalence locally" },
+    ],
+    alleleFreqs: [
+      { gene:"ATP7B", variant:"p.His1069Gln (H1069Q)", pop:"Eastern European", af:"0.005", carrier:"~1/100", path:"Pathogenic", evidence:"High" },
+      { gene:"ATP7B", variant:"p.Arg778Leu (R778L)", pop:"East/Southeast Asian", af:"0.004", carrier:"~1/125", path:"Pathogenic", evidence:"High" },
+      { gene:"ATP7B", variant:"p.Arg778Leu", pop:"South Asian", af:"0.002", carrier:"~1/250", path:"Pathogenic", evidence:"Moderate" },
+      { gene:"ATP7B", variant:"Various pathogenic", pop:"European (non-Finnish)", af:"0.003", carrier:"~1/165", path:"Pathogenic", evidence:"High" },
+      { gene:"ATP7B", variant:"c.2304dupC", pop:"Chinese", af:"0.003", carrier:"~1/165", path:"Pathogenic", evidence:"High" },
+    ],
+    chartPops: ["Eastern European","East Asian","South Asian","European","Chinese"],
+    chartAFs: [0.005, 0.004, 0.002, 0.003, 0.003],
+    actionable: [
+      {
+        gene:"ATP7B", variant:"Biallelic pathogenic variants",
+        significance:"Pathogenic", evidenceLevel:"High", actionability:"High",
+        badges:["ClinGen Curated","High Evidence","Treatment Available","Screening Available"],
+        screening:"24h urinary copper; serum ceruloplasmin (low); slit-lamp Kayser-Fleischer rings; liver biopsy (copper quantification); brain MRI; LFTs; sibling and offspring testing",
+        prevention:"Pre-symptomatic treatment in diagnosed individuals (zinc maintenance) prevents disease manifestation; dietary copper restriction; avoid alcohol",
+        treatment:"D-penicillamine (copper chelation); trientine (chelation, preferred for neurological); zinc acetate/sulfate (maintenance/prophylaxis); tetrathiomolybdate (clinical trials); liver transplantation for fulminant hepatic failure or decompensated cirrhosis — corrects metabolic defect",
+        drugAvoidance:"Avoid copper-rich foods (liver, shellfish, nuts, chocolate) especially early in treatment; antacids reduce zinc absorption",
+        pharmacogenomics:"N/A",
+        guideline:"EASL Wilson Disease Clinical Practice Guidelines 2012 (update in progress); AASLD; GeneReviews ATP7B"
+      }
+    ]
+  },
+
+  fmf: {
+    name: "Familial Mediterranean Fever",
+    desc: "The most common monogenic autoinflammatory disease, caused by pathogenic variants in MEFV (encoding pyrin), leading to dysregulated IL-1β secretion and recurrent febrile polyserositis episodes. Predominantly affects Mediterranean and Middle Eastern populations. Highly treatable with colchicine.",
+    inheritance: "Autosomal recessive (most cases); some dominant (p.Met694del)",
+    genes: ["MEFV"],
+    keyVariants: ["MEFV c.2080A>G (p.Met694Val — most common & severe)", "MEFV p.Met694Ile", "MEFV p.Met680Ile","MEFV p.Glu148Gln"],
+    prevalence: "1/200–1/1,000 in Mediterranean populations; carrier frequency up to 1/5 in some groups",
+    globalCases: "~150,000",
+    mostAffected: "Armenians, Sephardic Jews, Turks, Arabs, Iranians",
+    mostAffectedSub: "Armenian carrier frequency ~1/5 (20%)",
+    whoCategory: "Rare autoinflammatory / periodic fever syndrome",
+    orphanet: "ORPHA:342",
+    omim: "MIM: 249100",
+    actionabilityLevel: "High",
+    evidenceStrength: "high",
+    phenotypes: ["Recurrent febrile episodes (12–72 hours)","Peritonitis (abdominal pain)","Pleuritis (chest pain)","Synovitis/arthritis","Erysipelas-like erythema","AA amyloidosis (renal, if untreated)","Scrotal inflammation","Pericarditis (rare)"],
+    genoPhenoNotes: "p.Met694Val is the most severe allele — associated with amyloidosis, arthritis, and incomplete colchicine response. Homozygous p.Met694Val has worst outcomes. p.Glu148Gln is a common low-penetrance variant, often found in compound heterozygotes with unclear significance. MEFV variant spectrum varies by ethnicity: Armenians enriched for p.Met694Val; Sephardic Jews for p.Met694Ile and p.Glu148Gln.",
+    clinActionSummary: "Colchicine is highly effective in >95% of patients — suppresses attacks and prevents amyloidosis. IL-1 inhibitors (anakinra, canakinumab, rilonacept) for colchicine-resistant or -intolerant patients. Early diagnosis and adherence to colchicine prevents renal amyloidosis.",
+    enrichmentNotes: "Armenian population: carrier frequency ~20%, highest known. Turkish and Arab populations: carrier ~10–15%. Sephardic Jewish: ~12–15%. Northern European: very rare (<1/50,000). Iranian: ~12%. Mediterranean basin populations should have low threshold for clinical and genetic testing.",
+    mapData: [
+      { lat:40, lng:45, region:"Armenia / Armenian diaspora", prevalence:"1/200–1/500; carrier ~20%", cases:"~15,000", note:"Highest known prevalence; national registry" },
+      { lat:39, lng:35, region:"Turkey", prevalence:"1/1,000; carrier ~10%", cases:"~75,000", note:"Largest absolute patient population" },
+      { lat:31.5, lng:34.8, region:"Israel (Sephardic/Middle Eastern Jews)", prevalence:"1/200–1/500", cases:"~15,000", note:"Registry data; colchicine widely used" },
+      { lat:25, lng:45, region:"Arabian Peninsula / Iraq", prevalence:"1/1,000–1/2,000", cases:"~20,000", note:"Arab carrier frequency ~10–15%" },
+      { lat:32, lng:53, region:"Iran", prevalence:"1/1,000", cases:"~80,000", note:"Iranian carrier ~12%" },
+      { lat:40, lng:12, region:"Italy (Southern) / Mediterranean", prevalence:"1/5,000–1/10,000", cases:"~10,000", note:"Southern Italian enrichment" },
+      { lat:40, lng:-100, region:"United States", prevalence:"~1/10,000 overall (higher in diaspora)", cases:"~30,000", note:"Middle Eastern and Armenian diaspora concentrated" },
+    ],
+    alleleFreqs: [
+      { gene:"MEFV", variant:"p.Met694Val (M694V)", pop:"Armenian", af:"0.10–0.15", carrier:"~1/5", path:"Pathogenic", evidence:"High" },
+      { gene:"MEFV", variant:"p.Met694Val", pop:"Turkish", af:"0.04–0.08", carrier:"~1/7", path:"Pathogenic", evidence:"High" },
+      { gene:"MEFV", variant:"p.Met694Val", pop:"Sephardic Jewish", af:"0.03–0.06", carrier:"~1/10", path:"Pathogenic", evidence:"High" },
+      { gene:"MEFV", variant:"p.Glu148Gln (E148Q)", pop:"Mediterranean general", af:"0.02–0.08", carrier:"~1/6–1/25", path:"Likely Pathogenic (low penetrance)", evidence:"Moderate" },
+      { gene:"MEFV", variant:"p.Met680Ile (M680I)", pop:"Iranian / Arab", af:"0.03–0.05", carrier:"~1/10", path:"Pathogenic", evidence:"High" },
+    ],
+    chartPops: ["Armenian","Turkish","Sephardic Jewish","Iranian/Arab","European"],
+    chartAFs: [0.12, 0.06, 0.05, 0.04, 0.0005],
+    actionable: [
+      {
+        gene:"MEFV", variant:"p.Met694Val and other pathogenic variants (biallelic/heterozygous with phenotype)",
+        significance:"Pathogenic", evidenceLevel:"High", actionability:"High",
+        badges:["ClinGen Curated","High Evidence","Treatment Available","Screening Available"],
+        screening:"Clinical diagnosis using Tel-Hashomer or Eurofever criteria; MEFV sequencing panel; SAA (serum amyloid A) monitoring; 24h urine protein for amyloidosis surveillance; CBC, CRP/ESR during attacks",
+        prevention:"Lifelong colchicine therapy prevents attacks AND prevents AA amyloidosis (major cause of end-stage renal disease in untreated FMF); population carrier screening in high-prevalence communities",
+        treatment:"Colchicine 1–3 mg/day (>95% responders — reduces attack frequency and severity and prevents amyloidosis); IL-1 inhibitors for colchicine-resistant/intolerant: anakinra (Kineret), canakinumab (Ilaris; licensed for FMF), rilonacept (Arcalyst)",
+        drugAvoidance:"Colchicine: adjust dose in severe renal/hepatic impairment; CYP3A4 and P-gp inhibitors (clarithromycin, cyclosporine) increase colchicine toxicity",
+        pharmacogenomics:"CYP3A4 and ABCB1 (P-gp) polymorphisms affect colchicine pharmacokinetics — monitor for toxicity with inhibitor co-administration",
+        guideline:"EULAR/PReS FMF Recommendations 2016; ISSAID; Eurofever criteria"
+      }
+    ]
+  }
+
+};
+
+// ============================================================
+// STATE
+// ============================================================
+let currentDisease = 'marfan';
+let leafletMap = null;
+let mapMarkers = [];
+let alleleChartInstance = null;
+
+// ============================================================
+// TAB NAVIGATION
+// ============================================================
+function showTab(id) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('nav button').forEach(b => b.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  event.currentTarget.classList.add('active');
+
+  if (id === 'burden') {
+    setTimeout(() => initOrUpdateMap(), 50);
+  }
+  if (id === 'allele') {
+    setTimeout(() => renderAlleleChart(), 50);
+  }
+}
+
+// ============================================================
+// DISEASE CHANGE
+// ============================================================
+document.getElementById('diseaseSelect').addEventListener('change', function() {
+  currentDisease = this.value;
+  updateAll();
+});
+
+document.getElementById('searchInput').addEventListener('input', function() {
+  const q = this.value.toLowerCase();
+  // Basic search: if query matches a disease name or gene, switch to it
+  for (const [key, d] of Object.entries(DISEASES)) {
+    if (d.name.toLowerCase().includes(q) || d.genes.some(g => g.toLowerCase().includes(q))) {
+      document.getElementById('diseaseSelect').value = key;
+      currentDisease = key;
+      updateAll();
+      break;
+    }
+  }
+});
+
+function updateAll() {
+  renderOverview();
+  updateMapData();
+  updateAlleleTable();
+  renderAlleleChart();
+  renderActionable();
+}
+
+// ============================================================
+// HELPERS
+// ============================================================
+function badge(text, cls) {
+  return `<span class="badge badge-${cls}">${text}</span>`;
+}
+
+function evidencePips(level) {
+  const map = { high: 5, moderate: 3, low: 1 };
+  const n = map[level] || 3;
+  let html = '<div class="evidence-bar">';
+  for (let i = 0; i < 5; i++) {
+    let cls = 'evidence-pip';
+    if (i < n) cls += level === 'high' ? ' filled-high' : level === 'moderate' ? ' filled-mod' : ' filled-low';
+    html += `<div class="${cls}"></div>`;
+  }
+  return html + '</div>';
+}
+
+function infoRow(label, value) {
+  return `<div class="info-row"><div class="info-label">${label}</div><div class="info-value">${value}</div></div>`;
+}
+
+// ============================================================
+// TAB 1: OVERVIEW
+// ============================================================
+function renderOverview() {
+  const d = DISEASES[currentDisease];
+
+  // Hero
+  document.getElementById('diseaseHero').innerHTML = `
+    <div class="disease-name">${d.name}</div>
+    <div class="disease-desc">${d.desc}</div>
+    <div class="disease-meta">
+      <div class="meta-pill"><span>Inheritance:</span>${d.inheritance}</div>
+      <div class="meta-pill"><span>Gene(s):</span>${d.genes.join(', ')}</div>
+      <div class="meta-pill"><span>Prevalence:</span>${d.prevalence}</div>
+      <div class="meta-pill"><span>Actionability:</span>${d.actionabilityLevel}</div>
     </div>
-  </div>`).join('');
-}
-function gpTab(btn, gene, tab) {
-  const bar = document.getElementById('tabs-'+gene);
-  bar.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  ['variants','phenotypes','notes'].forEach(t=>{
-    const el = document.getElementById(gene+'-'+t);
-    if (el) el.classList.toggle('active', t===tab);
-  });
-}
+  `;
 
-/* ════════════════════════════════════════════════════════════════════
-   PANEL 5 — ACTIONABLE VARIANTS
-════════════════════════════════════════════════════════════════════ */
-function initActionable() {
-  renderActionableTable(ACTIONABLE);
-  renderAVTypeChart();
-  renderAVEvChart();
-}
-function updateActionable() {
-  const type  = document.getElementById('av-type').value;
-  const guide = document.getElementById('av-guide').value;
-  const ev    = document.getElementById('av-ev').value;
-  let data = ACTIONABLE.filter(d=>
-    (!type  || d.action_type.includes(type)) &&
-    (!guide || d.guideline.includes(guide)) &&
-    (!ev    || d.evidence===ev)
-  );
-  renderActionableTable(data);
-}
-function renderActionableTable(data) {
-  const evColor = e => e==='High'?'badge-teal':e==='Moderate'?'badge-amber':'badge-gray';
-  document.getElementById('av-table-wrap').innerHTML = `
-  <table>
-    <thead><tr>
-      <th>Gene</th><th>Variant</th><th>Disease</th><th>Action Type</th>
-      <th>Drug Relevance</th><th>Evidence</th><th>Badges</th>
-    </tr></thead>
-    <tbody>${data.map(d=>`<tr>
-      <td class="cell-gene">${d.gene}</td>
-      <td class="cell-variant" style="max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${d.variant}">${d.variant}</td>
-      <td class="text-sm" style="max-width:160px;">${d.disease}</td>
-      <td><span class="badge badge-navy">${d.action_type}</span></td>
-      <td class="text-xs text-gray" style="max-width:200px;">${d.drug_relevance}</td>
-      <td><span class="badge ${evColor(d.evidence)}">${d.evidence}</span></td>
-      <td style="min-width:180px;">${d.badge.map(b=>{
-        if (b.includes('ACMG')) return `<span class="badge badge-purple" style="margin:1px;">${b}</span>`;
-        if (b.includes('CPIC')) return `<span class="badge badge-teal" style="margin:1px;">${b}</span>`;
-        if (b.includes('ClinGen')) return `<span class="badge badge-amber" style="margin:1px;">${b}</span>`;
-        if (b.includes('High')) return `<span class="badge badge-green" style="margin:1px;">${b}</span>`;
-        if (b.includes('Needs')) return `<span class="badge badge-red" style="margin:1px;">${b}</span>`;
-        return `<span class="badge badge-gray" style="margin:1px;">${b}</span>`;
-      }).join('')}</td>
-    </tr>`).join('')}</tbody>
-  </table>`;
-}
-function renderAVTypeChart() {
-  const counts = {};
-  ACTIONABLE.forEach(d=>{ counts[d.action_type]=(counts[d.action_type]||0)+1; });
-  mkChart('av-type-chart', {
-    type:'bar',
-    data:{
-      labels:Object.keys(counts),
-      datasets:[{ data:Object.values(counts),
-        backgroundColor:['#2dd4bf','#8b5cf6','#f59e0b','#ef4444','#22c55e'],
-        borderWidth:0, borderRadius:4 }]
-    },
-    options:{
-      indexAxis:'y', responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{display:false}},
-      scales:{ x:{grid:{color:'#243650'}}, y:{grid:{color:'transparent'}} }
-    }
-  });
-}
-function renderAVEvChart() {
-  const counts = {};
-  ACTIONABLE.forEach(d=>{ counts[d.evidence]=(counts[d.evidence]||0)+1; });
-  mkChart('av-ev-chart', {
-    type:'doughnut',
-    data:{
-      labels:Object.keys(counts),
-      datasets:[{ data:Object.values(counts),
-        backgroundColor:['#2dd4bf','#f59e0b','#94a3b8'],
-        borderColor:'#1a2d42', borderWidth:2 }]
-    },
-    options:{
-      responsive:true, maintainAspectRatio:false, cutout:'55%',
-      plugins:{ legend:{ position:'right', labels:{ color:'#94a3b8', boxWidth:12 }}}
-    }
-  });
-}
+  // Stat cards
+  const actionBadgesMap = { High: 'badge-green', Moderate: 'badge-amber', Limited: 'badge-red' };
+  document.getElementById('statCards').innerHTML = `
+    <div class="stat-card">
+      <div class="stat-label">Est. Global Cases</div>
+      <div class="stat-value">${d.globalCases}</div>
+      <div class="stat-sub">${d.prevalence}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Causative Gene(s)</div>
+      <div class="stat-value" style="font-size:16px">${d.genes.join(', ')}</div>
+      <div class="stat-sub">${d.inheritance.split('(')[0].trim()}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Clinical Actionability</div>
+      <div class="stat-value" style="font-size:16px">${d.actionabilityLevel}</div>
+      <div class="stat-sub">Evidence: ${d.evidenceStrength}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Most Affected Population</div>
+      <div class="stat-value" style="font-size:13px;line-height:1.3">${d.mostAffected}</div>
+      <div class="stat-sub" style="font-size:10px">${d.mostAffectedSub}</div>
+    </div>
+  `;
 
-/* ════════════════════════════════════════════════════════════════════
-   PANEL 6 — PRIORITY
-════════════════════════════════════════════════════════════════════ */
-function initPriority() {
-  renderPriorityList(PRIORITY_DATA);
-  renderPriorityChart(PRIORITY_DATA);
-  renderPopUnderrepChart();
-}
-function updatePriority() {
-  const sortKey = document.getElementById('pr-sort').value;
-  const cat     = document.getElementById('pr-cat').value;
-  let data = [...PRIORITY_DATA].filter(d=>!cat || d.category===cat);
-  data.sort((a,b)=> b[sortKey] - a[sortKey]);
-  renderPriorityList(data);
-  renderPriorityChart(data);
-}
-function renderPriorityList(data) {
-  const colors = ['var(--red)','var(--amber)','var(--amber)','var(--teal)','var(--teal)','var(--gray2)'];
-  const wrap = document.getElementById('priority-list');
-  wrap.innerHTML = data.map((d,i)=>{
-    const scores = [
-      { label:'Burden',      val:d.burden },
-      { label:'Allele Freq', val:d.allele_freq },
-      { label:'Action.',     val:d.actionability },
-      { label:'Evid. Gap',   val:d.evidence_gap },
-      { label:'Pop. Rep.',   val:d.pop_underrep },
-    ];
-    const rankColor = i<2?'var(--red)':i<4?'var(--amber)':'var(--gray3)';
-    return `<div class="priority-row">
-      <div class="priority-rank" style="color:${rankColor};">#${i+1}</div>
-      <div class="priority-info">
-        <div class="priority-name">${d.name}</div>
-        <div class="priority-meta">${d.gene} · ${d.category} · ${d.vus_count} VUS variants</div>
-        <div class="priority-scores mt-8">
-          ${scores.map(s=>`<div class="pscore">
-            <div class="score-bar" style="width:60px;">
-              <div class="score-bar-fill" style="width:${s.val*10}%;background:${colors[i]||'var(--gray3)'};"></div>
-            </div>
-            <span style="margin-top:3px;font-size:10px;color:var(--gray3);">${s.label} ${s.val.toFixed(1)}</span>
-          </div>`).join('')}
+  // Gene/variant info
+  document.getElementById('geneVariantInfo').innerHTML = `
+    ${infoRow('Gene(s)', d.genes.map(g => `<span class="badge badge-teal">${g}</span>`).join(' '))}
+    ${d.keyVariants.map(v => infoRow('Key Variant', `<span style="font-family:monospace;font-size:11px;color:var(--teal)">${v}</span>`)).join('')}
+    ${infoRow('Inheritance', d.inheritance)}
+    ${infoRow('Orphanet', d.orphanet)}
+    ${infoRow('OMIM', d.omim)}
+    <div class="mt-8"><div class="text-gray text-sm" style="margin-bottom:4px">Key Variants</div>
+    <div style="font-size:11px;color:var(--gray);line-height:1.6">
+      <!-- TODO: Link to ClinVar and gnomAD variant pages for each variant -->
+      ${d.keyVariants.map(v => `• ${v}`).join('<br>')}
+    </div></div>
+  `;
+
+  // Phenotype info
+  const phenoHtml = d.phenotypes.map(p =>
+    `<span class="badge badge-purple" style="margin:2px 2px">${p}</span>`
+  ).join('');
+  document.getElementById('phenotypeInfo').innerHTML = `
+    <div style="margin-bottom:10px">${phenoHtml}</div>
+    <div class="info-row" style="margin-top:8px">
+      <div class="info-label">OMIM/HPO Link</div>
+      <div class="info-value"><span class="badge badge-gray">HPO terms available</span></div>
+    </div>
+    <!-- TODO: Connect to HPO API for term expansion and disease–phenotype associations -->
+  `;
+
+  // Geno-pheno
+  document.getElementById('genoPhenoInfo').innerHTML = `
+    <p style="font-size:13px;color:var(--white);line-height:1.7">${d.genoPhenoNotes}</p>
+  `;
+
+  // Pop freq summary
+  const topFreq = d.alleleFreqs[0];
+  document.getElementById('popFreqSummary').innerHTML = `
+    ${infoRow('Highest Carrier Pop.', topFreq ? topFreq.pop : 'N/A')}
+    ${topFreq ? infoRow('Carrier Frequency', topFreq.carrier) : ''}
+    ${topFreq ? infoRow('Allele Frequency', topFreq.af) : ''}
+    <div class="mt-8">
+      ${d.alleleFreqs.slice(0,4).map(f => `
+        <div class="pop-bar-wrap">
+          <div class="pop-label"><span>${f.pop}</span><span>${f.af}</span></div>
+          <div class="pop-bar-bg"><div class="pop-bar-fill" style="width:${Math.min(parseFloat(f.af)*2000,100)}%"></div></div>
         </div>
-      </div>
-      <div class="priority-total">
-        <div class="pt-score" style="color:${rankColor};">${d.total}</div>
-        <div class="pt-label">Priority Score</div>
-        <div style="margin-top:6px;"><span class="badge ${i<3?'badge-red':i<6?'badge-amber':'badge-gray'}" style="font-size:10px;">${i<3?'🔴 Urgent':i<6?'🟡 High':'⚪ Moderate'}</span></div>
-      </div>
-    </div>`;
-  }).join('');
+      `).join('')}
+    </div>
+    <!-- TODO: Connect to gnomAD population frequency API -->
+  `;
+
+  // Clinical actionability summary
+  const firstAction = d.actionable[0];
+  document.getElementById('clinActionSummary').innerHTML = `
+    <p style="font-size:13px;color:var(--white);line-height:1.7;margin-bottom:10px">${d.clinActionSummary}</p>
+    ${firstAction ? `
+      <div>${firstAction.badges.map(b =>
+        badge(b, b.includes('High') ? 'green' : b.includes('ACMG') || b.includes('ClinGen') ? 'teal' : b.includes('CPIC') ? 'purple' : b.includes('Treatment') ? 'amber' : 'gray')
+      ).join('')}</div>
+    ` : ''}
+  `;
+
+  // Evidence
+  document.getElementById('evidenceInfo').innerHTML = `
+    ${infoRow('Evidence Strength', `${evidencePips(d.evidenceStrength)} <span class="text-sm" style="text-transform:capitalize;margin-left:6px">${d.evidenceStrength}</span>`)}
+    ${infoRow('WHO Category', d.whoCategory)}
+    ${infoRow('Key Data Sources', `<span class="badge badge-gray">OMIM</span><span class="badge badge-gray">Orphanet</span><span class="badge badge-gray">ClinVar</span>`)}
+    <div style="margin-top:10px;font-size:11px;color:var(--gray);line-height:1.6">
+      <!-- TODO: Fetch evidence tiers from ClinGen Actionability Portal API -->
+      Further evidence available via ClinGen actionability scoring, OMIM clinical synopsis, and Orphanet clinical description.
+    </div>
+  `;
 }
-function renderPriorityChart(data) {
-  const top8 = data.slice(0,8);
-  mkChart('priority-chart', {
-    type:'bar',
-    data:{
-      labels: top8.map(d=>d.name.length>20?d.name.substring(0,20)+'…':d.name),
-      datasets:[
-        { label:'Burden',       data:top8.map(d=>d.burden),       backgroundColor:'rgba(245,158,11,.8)',  borderWidth:0 },
-        { label:'Evid. Gap',    data:top8.map(d=>d.evidence_gap),  backgroundColor:'rgba(239,68,68,.8)',   borderWidth:0 },
-        { label:'Pop. Underrep',data:top8.map(d=>d.pop_underrep),  backgroundColor:'rgba(139,92,246,.8)', borderWidth:0 },
-        { label:'Actionability',data:top8.map(d=>d.actionability), backgroundColor:'rgba(45,212,191,.8)', borderWidth:0 },
-      ]
-    },
-    options:{
-      type:'bar', indexAxis:'y', responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{ labels:{ color:'#94a3b8', boxWidth:12 }}},
-      scales:{
-        x:{ stacked:false, grid:{color:'#243650'}, max:10 },
-        y:{ stacked:false, grid:{color:'transparent'} }
-      }
-    }
+
+// ============================================================
+// TAB 2: MAP
+// ============================================================
+const PREVALENCE_COLORS = ['#00b4d8','#0096b4','#7b5ea7','#f4a261','#e76f51'];
+
+function getColor(idx) {
+  return PREVALENCE_COLORS[idx % PREVALENCE_COLORS.length];
+}
+
+function initOrUpdateMap() {
+  const d = DISEASES[currentDisease];
+
+  if (!leafletMap) {
+    leafletMap = L.map('map', { center: [20, 20], zoom: 2, zoomControl: true });
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+      attribution: '© OpenStreetMap © CARTO',
+      maxZoom: 18
+    }).addTo(leafletMap);
+  }
+
+  // Remove old markers
+  mapMarkers.forEach(m => leafletMap.removeLayer(m));
+  mapMarkers = [];
+
+  document.getElementById('mapTitle').textContent = `Prevalence of ${d.name} by Region`;
+  document.getElementById('globalCases').textContent = d.globalCases;
+  document.getElementById('globalCasesSub').textContent = d.prevalence;
+  document.getElementById('mostAffected').textContent = d.mostAffected;
+  document.getElementById('mostAffectedSub').textContent = d.mostAffectedSub;
+  document.getElementById('whoCategory').textContent = d.whoCategory;
+  document.getElementById('orphanetCode').textContent = d.orphanet;
+  document.getElementById('omimCode').textContent = d.omim;
+
+  // Add markers
+  d.mapData.forEach((loc, i) => {
+    const color = getColor(i);
+    const radius = 20 + i * 4; // vary size
+    const circle = L.circleMarker([loc.lat, loc.lng], {
+      radius: 14 + (i === 0 ? 8 : 0),
+      color: color,
+      fillColor: color,
+      fillOpacity: 0.7,
+      weight: 2
+    }).addTo(leafletMap);
+
+    circle.bindPopup(`
+      <div style="background:#162032;color:#f8f9fa;padding:12px;border-radius:8px;min-width:220px;font-family:sans-serif">
+        <div style="font-weight:700;font-size:14px;color:#00b4d8;margin-bottom:4px">${loc.region}</div>
+        <div style="font-size:12px;margin-bottom:2px"><b>Disease:</b> ${d.name}</div>
+        <div style="font-size:12px;margin-bottom:2px"><b>Prevalence:</b> ${loc.prevalence}</div>
+        <div style="font-size:12px;margin-bottom:2px"><b>Est. Cases:</b> ${loc.cases}</div>
+        <div style="font-size:12px;margin-bottom:4px"><b>Gene(s):</b> ${d.genes.join(', ')}</div>
+        <div style="font-size:11px;color:#9aacb8;font-style:italic">${loc.note}</div>
+        <!-- TODO: Pull live prevalence from Orphanet or WHO/GBD API -->
+      </div>
+    `, { maxWidth: 280 });
+
+    mapMarkers.push(circle);
   });
+
+  // Legend
+  document.getElementById('mapLegend').innerHTML = `
+    <span style="font-size:11px;color:var(--gray);font-weight:600;margin-right:6px">Prevalence levels:</span>
+    ${d.mapData.map((loc, i) => `
+      <div class="legend-item"><div class="legend-dot" style="background:${getColor(i)}"></div><span>${loc.region.split('(')[0].trim()}: ${loc.prevalence}</span></div>
+    `).join('')}
+  `;
+
+  // Prevalence table
+  document.getElementById('prevalenceTable').innerHTML = `
+    <table>
+      <thead><tr><th>Region</th><th>Prevalence</th><th>Est. Cases</th><th>Note</th></tr></thead>
+      <tbody>
+        ${d.mapData.map((loc, i) => `
+          <tr>
+            <td><span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${getColor(i)};margin-right:6px"></span>${loc.region}</td>
+            <td>${loc.prevalence}</td>
+            <td>${loc.cases}</td>
+            <td style="font-size:11px;color:var(--gray)">${loc.note}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+
+  document.getElementById('enrichmentNotes').innerHTML = d.enrichmentNotes;
 }
-function renderPopUnderrepChart() {
-  const pops = ['Sub-Saharan Africa','South Asia','East Asia (non-pop)','Latin America','Middle East','Indigenous/Pacific','Southeast Asia'];
-  const scores = [9.5, 8.2, 7.8, 7.5, 7.1, 9.2, 8.0];
-  mkChart('pop-underrep-chart', {
-    type:'bar',
-    data:{
-      labels:pops,
-      datasets:[{ label:'Underrepresentation Score', data:scores,
-        backgroundColor:scores.map(s=>s>9?'rgba(239,68,68,.8)':s>8?'rgba(245,158,11,.8)':'rgba(139,92,246,.7)'),
-        borderWidth:0, borderRadius:4 }]
+
+function updateMapData() {
+  const activePanel = document.getElementById('tab-burden');
+  if (activePanel.classList.contains('active')) {
+    initOrUpdateMap();
+  }
+}
+
+// ============================================================
+// TAB 3: ALLELE FREQUENCIES
+// ============================================================
+function updateAlleleTable() {
+  const d = DISEASES[currentDisease];
+  document.getElementById('alleleTableDisease').textContent = d.name;
+
+  const tbody = document.getElementById('alleleTableBody');
+  tbody.innerHTML = d.alleleFreqs.map(f => `
+    <tr>
+      <td><span class="badge badge-teal">${f.gene}</span></td>
+      <td><span style="font-family:monospace;font-size:11px">${f.variant}</span></td>
+      <td>${f.pop}</td>
+      <td style="font-weight:600;color:var(--teal)">${f.af}</td>
+      <td style="color:var(--amber)">${f.carrier}</td>
+      <td>${badge(f.path, f.path === 'Pathogenic' ? 'red' : f.path === 'Likely Pathogenic' ? 'amber' : 'gray')}</td>
+      <td>${badge(f.evidence + ' Evidence', f.evidence === 'High' ? 'green' : f.evidence === 'Moderate' ? 'amber' : 'gray')}</td>
+    </tr>
+  `).join('');
+
+  // Variant summary
+  document.getElementById('variantSummary').innerHTML = d.alleleFreqs.map(f => `
+    <div style="border-bottom:1px solid var(--border);padding:8px 0">
+      <div style="font-size:12px;font-weight:600;color:var(--teal)">${f.gene} — <span style="font-family:monospace;font-size:11px">${f.variant}</span></div>
+      <div style="font-size:11px;color:var(--gray);margin-top:2px">${f.pop} · Carrier: ${f.carrier}</div>
+      <div style="margin-top:4px">${badge(f.path, f.path === 'Pathogenic' ? 'red' : 'amber')} ${badge(f.evidence, f.evidence === 'High' ? 'green' : 'amber')}</div>
+    </div>
+  `).join('');
+}
+
+function renderAlleleChart() {
+  const d = DISEASES[currentDisease];
+  const ctx = document.getElementById('alleleChart');
+  if (!ctx) return;
+
+  if (alleleChartInstance) {
+    alleleChartInstance.destroy();
+    alleleChartInstance = null;
+  }
+
+  const colors = d.chartPops.map((_, i) => [
+    'rgba(0,180,216,0.8)','rgba(123,94,167,0.8)','rgba(244,162,97,0.8)',
+    'rgba(46,196,182,0.8)','rgba(231,111,81,0.8)'
+  ][i % 5]);
+
+  alleleChartInstance = new Chart(ctx, {
+    type: 'bar',
+    data: {
+      labels: d.chartPops,
+      datasets: [{
+        label: 'Allele Frequency',
+        data: d.chartAFs,
+        backgroundColor: colors,
+        borderColor: colors.map(c => c.replace('0.8','1')),
+        borderWidth: 1,
+        borderRadius: 4,
+      }]
     },
-    options:{
-      indexAxis:'y', responsive:true, maintainAspectRatio:false,
-      plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx=>`Score: ${ctx.raw}/10` }}},
-      scales:{
-        x:{ max:10, grid:{color:'#243650'} },
-        y:{ grid:{color:'transparent'}, ticks:{font:{size:11}} }
+    options: {
+      responsive: true,
+      maintainAspectRatio: false,
+      plugins: {
+        legend: { display: false },
+        tooltip: {
+          callbacks: {
+            label: ctx => `AF: ${ctx.raw.toExponential ? ctx.raw.toExponential(2) : ctx.raw}`
+          }
+        }
+      },
+      scales: {
+        x: {
+          ticks: { color: '#9aacb8', font: { size: 11 } },
+          grid: { color: 'rgba(255,255,255,0.05)' }
+        },
+        y: {
+          ticks: { color: '#9aacb8', font: { size: 10 },
+            callback: v => v < 0.001 ? v.toExponential(1) : v.toFixed(4)
+          },
+          grid: { color: 'rgba(255,255,255,0.05)' }
+        }
       }
     }
   });
 }
 
-/* ════════════════════════════════════════════════════════════════════
-   GLOBAL SEARCH
-════════════════════════════════════════════════════════════════════ */
-function globalSearch(q) {
-  if (!q || q.length < 2) return;
-  q = q.toLowerCase();
-  // Check allele data
-  const geneMatch = ALLELE_DATA.find(d=>d.gene.toLowerCase().includes(q));
-  if (geneMatch) { switchPanel('allele', document.querySelector('[data-panel="allele"]')); return; }
-  const diseaseMatch = RARE_DISEASES.find(d=>d.name.toLowerCase().includes(q)||d.gene.toLowerCase().includes(q));
-  if (diseaseMatch) { switchPanel('rare', document.querySelector('[data-panel="rare"]')); }
-}
+// ============================================================
+// TAB 4: ACTIONABLE VARIANTS
+// ============================================================
+function renderActionable() {
+  const d = DISEASES[currentDisease];
+  document.getElementById('actionTitle').textContent = `Actionable Variants — ${d.name}`;
 
-/* ════════════════════════════════════════════════════════════════════
-   FILE UPLOAD
-════════════════════════════════════════════════════════════════════ */
-function handleUpload(event) {
-  const file = event.target.files[0];
-  if (!file) return;
-  const ext = file.name.split('.').pop().toLowerCase();
-  if (!['csv','xlsx','tsv'].includes(ext)) {
-    alert('Please upload a CSV, XLSX, or TSV file.');
+  const allBadges = d.actionable.flatMap(a => a.badges);
+  const uniqueBadges = [...new Set(allBadges)];
+  document.getElementById('actionBadges').innerHTML = uniqueBadges.map(b =>
+    badge(b, b.includes('High') ? 'green' : b.includes('ACMG') ? 'teal' : b.includes('ClinGen') ? 'teal' : b.includes('CPIC') ? 'purple' : b.includes('Treatment') ? 'amber' : b.includes('Screening') ? 'amber' : 'gray')
+  ).join('');
+
+  if (!d.actionable || d.actionable.length === 0) {
+    document.getElementById('actionContent').innerHTML = `
+      <div class="no-action">
+        ⚠️ <strong>Limited established clinical actionability</strong>; research or specialist evaluation recommended.<br>
+        No ACMG actionable or CPIC-guideline variants are currently established for this condition.
+      </div>
+    `;
     return;
   }
-  // Show a notification (real processing would parse the file)
-  const banner = document.createElement('div');
-  banner.style.cssText = 'position:fixed;top:70px;right:20px;z-index:999;background:var(--card);border:1px solid var(--teal);border-radius:10px;padding:12px 18px;color:var(--teal);font-size:13px;max-width:300px;box-shadow:0 8px 24px rgba(0,0,0,.4);';
-  banner.innerHTML = `<strong>✓ File loaded:</strong> ${file.name}<br><span style="color:var(--gray2);font-size:12px;">File parsing ready — connect data schema to integrate with atlas.</span>`;
-  document.body.appendChild(banner);
-  setTimeout(()=>banner.remove(), 4000);
-  event.target.value = '';
+
+  document.getElementById('actionContent').innerHTML = d.actionable.map(a => `
+    <div class="action-card">
+      <div class="action-header">
+        <div>
+          <div class="action-gene">${a.gene}</div>
+          <div class="action-variant">${a.variant}</div>
+          <div style="margin-top:6px">${a.badges.map(b =>
+            badge(b, b.includes('High') ? 'green' : b.includes('ACMG') ? 'teal' : b.includes('ClinGen') ? 'teal' : b.includes('CPIC') ? 'purple' : b.includes('Treatment') ? 'amber' : b.includes('Screening') ? 'amber' : 'gray')
+          ).join('')}</div>
+        </div>
+        <div style="text-align:right">
+          ${badge(a.significance, a.significance === 'Pathogenic' ? 'red' : 'amber')}
+          <div style="margin-top:6px">${badge('Actionability: ' + a.actionability, a.actionability === 'High' ? 'green' : a.actionability === 'Moderate' ? 'amber' : 'gray')}</div>
+          <div style="margin-top:4px">${evidencePips(a.evidenceLevel.toLowerCase())}</div>
+        </div>
+      </div>
+      <div class="action-body">
+        <div class="action-section">
+          <div class="action-section-title">🔬 Recommended Screening</div>
+          <div class="action-section-val">${a.screening}</div>
+        </div>
+        <div class="action-section">
+          <div class="action-section-title">🛡️ Prevention / Monitoring</div>
+          <div class="action-section-val">${a.prevention}</div>
+        </div>
+        <div class="action-section">
+          <div class="action-section-title">💊 Treatment Options</div>
+          <div class="action-section-val">${a.treatment}</div>
+        </div>
+        <div class="action-section">
+          <div class="action-section-title">⚠️ Drug Avoidance</div>
+          <div class="action-section-val">${a.drugAvoidance}</div>
+        </div>
+        ${a.pharmacogenomics && a.pharmacogenomics !== 'N/A' ? `
+        <div class="action-section col-span-2">
+          <div class="action-section-title">🧪 Pharmacogenomic Relevance</div>
+          <div class="action-section-val">${a.pharmacogenomics}</div>
+        </div>` : ''}
+        <div class="action-section" style="grid-column:1/-1;border-top:1px solid var(--border);padding-top:10px;margin-top:6px">
+          <div class="action-section-title">📋 Clinical Guideline / Source</div>
+          <div class="action-section-val" style="color:var(--teal)">${a.guideline}</div>
+        </div>
+      </div>
+    </div>
+  `).join('');
 }
 
-/* ════════════════════════════════════════════════════════════════════
-   INIT ON LOAD
-════════════════════════════════════════════════════════════════════ */
-window.addEventListener('DOMContentLoaded', () => {
-  initPanel('burden'); // init first panel
-});
+// ============================================================
+// INIT
+// ============================================================
+updateAll();
 </script>
 </body>
 </html>
